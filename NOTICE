@@ -1,0 +1,6 @@
+cat > NOTICE << 'EOF'
+Ontologic — Proof-of-Reasoning on Hedera
+Copyright (c) 2025 [Your Name]
+
+This product includes software developed by contributors to the Ontologic project.
+EOF

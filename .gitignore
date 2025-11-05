@@ -25,3 +25,13 @@ replay_pid*
 
 # Environment credentials
 *.env 
+
+printf "%s\n" \
+"node_modules/" \
+".env" \
+"artifacts/" \
+"cache/" \
+"typechain*/" \
+"coverage*/" \
+".DS_Store" \
+> .gitignore
