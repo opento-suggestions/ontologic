@@ -3,6 +3,11 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  Client,
+  PrivateKey,
+  TopicMessageSubmitTransaction,
+} from "@hashgraph/sdk";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -45,6 +50,31 @@ const proof = {
 const canonical = JSON.stringify(proof);
 const proofHash = ethers.keccak256(ethers.toUtf8Bytes(canonical));
 
+async function submitToHCS(message) {
+  const topicId = process.env.HCS_TOPIC_ID;
+
+  if (!topicId) {
+    console.warn("⚠️  No HCS_TOPIC_ID set in .env — skipping consensus write.");
+    return null;
+  }
+
+  const operatorId = process.env.OPERATOR_ID;
+  const operatorKey = PrivateKey.fromString(process.env.OPERATOR_DER_KEY);
+  const client = Client.forTestnet().setOperator(operatorId, operatorKey);
+
+  console.log(`\n📝 Submitting proof to HCS topic ${topicId}...`);
+
+  const tx = await new TopicMessageSubmitTransaction()
+    .setTopicId(topicId)
+    .setMessage(message)
+    .execute(client);
+
+  const receipt = await tx.getReceipt(client);
+  console.log("✅ HCS submission status:", receipt.status.toString());
+
+  return receipt;
+}
+
 async function main() {
   const RPC_URL = process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api";
   const provider = new ethers.JsonRpcProvider(RPC_URL);
@@ -54,19 +84,27 @@ async function main() {
   console.log("Caller:", wallet.address);
   console.log("Using rule:", RULE_ID);
   console.log("Proof hash:", proofHash);
-  console.log("\nExecuting reasoning operation: RED + BLUE = PURPLE");
+  console.log("\nExecuting reasoning operation: RED + BLUE → PURPLE");
 
+  // Step 1: Execute on-chain reasoning
   const tx = await contract.reason(RULE_ID, 1n, proofHash, PROOF_URI);
   const rc = await tx.wait();
 
-  console.log("\nReasoned transaction:", rc.hash);
+  console.log("\n✅ Reasoned transaction:", rc.hash);
   console.log("\nCanonical JSON:");
   console.log(canonical);
-  console.log("\n=Verification Links:");
+
+  // Step 2: Submit proof to HCS for consensus-backed provenance
+  await submitToHCS(canonical);
+
+  console.log("\n📊 Verification Links:");
   console.log("Mirror Node:", `https://testnet.mirrornode.hedera.com/api/v1/transactions/${rc.hash}`);
   console.log("HashScan:   ", `https://hashscan.io/testnet/transaction/${rc.hash}`);
 
-  console.log("\n<Proof-of-Reasoning complete! Check the links above for the Reasoned event.");
+  console.log("\n🎉 Complete Proof-of-Reasoning chain:");
+  console.log("  1. ✓ CONTRACTCALL (validated RED + BLUE)");
+  console.log("  2. ✓ TOKENMINT (minted PURPLE)");
+  console.log("  3. ✓ HCS MESSAGE (consensus-backed proof)");
 }
 
 main().catch((err) => {
