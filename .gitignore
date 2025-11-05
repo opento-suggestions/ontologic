@@ -35,3 +35,4 @@ printf "%s\n" \
 "coverage*/" \
 ".DS_Store" \
 > .gitignore
+node_modules

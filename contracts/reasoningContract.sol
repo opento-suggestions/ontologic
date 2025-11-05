@@ -26,9 +26,9 @@ contract ReasoningContract {
     // Hedera HTS precompile address
     IHederaTokenService constant HTS = IHederaTokenService(address(0x167));
 
-    // Soft-gate constants for MVP
-    string public constant RED_TOKEN_ID  = "0.0.7185272";
-    string public constant BLUE_TOKEN_ID = "0.0.7185298";
+    // Soft-gate constants for MVP (EVM addresses of Hedera tokens)
+    address public constant RED_TOKEN_ADDR  = 0x00000000000000000000000000000000006dA378;
+    address public constant BLUE_TOKEN_ADDR = 0x00000000000000000000000000000000006Da392;
 
     address public owner;
     bytes32 public reasoningSchemaHash;
@@ -91,9 +91,8 @@ contract ReasoningContract {
         bool hasRed = false;
         bool hasBlue = false;
         for (uint256 i = 0; i < inputs.length; i++) {
-            string memory tokenId = _toString(inputs[i]);
-            if (keccak256(bytes(tokenId)) == keccak256(bytes(RED_TOKEN_ID))) hasRed = true;
-            if (keccak256(bytes(tokenId)) == keccak256(bytes(BLUE_TOKEN_ID))) hasBlue = true;
+            if (inputs[i] == RED_TOKEN_ADDR) hasRed = true;
+            if (inputs[i] == BLUE_TOKEN_ADDR) hasBlue = true;
         }
         require(hasRed && hasBlue, "missing RED or BLUE");
 
@@ -130,22 +129,5 @@ contract ReasoningContract {
         (bool ok, bytes memory data) =
             token.staticcall(abi.encodeWithSelector(IERC20.decimals.selector));
         return ok && data.length >= 32 ? abi.decode(data, (uint8)) : 8;
-    }
-
-    /**
-     * @dev Converts an address to its hex string representation.
-     * Used for comparing token addresses against Hedera token ID constants.
-     */
-    function _toString(address a) internal pure returns (string memory) {
-        bytes32 value = bytes32(uint256(uint160(a)));
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 20; i++) {
-            str[2 + i * 2] = alphabet[uint8(value[i + 12] >> 4)];
-            str[3 + i * 2] = alphabet[uint8(value[i + 12] & 0x0f)];
-        }
-        return string(str);
     }
 }
