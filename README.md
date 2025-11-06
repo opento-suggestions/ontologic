@@ -144,7 +144,6 @@ node scripts/reason.js
 
 ## Documentation
 
-See [CLAUDE.md](CLAUDE.md) for complete documentation including:
 - Detailed architecture overview
 - Environment configuration
 - Development workflows
