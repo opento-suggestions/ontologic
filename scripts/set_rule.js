@@ -117,44 +117,77 @@ async function setReasoningRule(contractAddress, params) {
  */
 async function main() {
   try {
-    logger.section("Set Reasoning Rule");
+    logger.section("Set Reasoning Rules (Alpha v0.3 - Dual-Domain)");
 
     // Get token configurations
     const redToken = getTokenConfig("RED");
+    const greenToken = getTokenConfig("GREEN");
     const blueToken = getTokenConfig("BLUE");
-    const purpleToken = getTokenConfig("PURPLE");
+    const whiteToken = getTokenConfig("WHITE");
+    const greyToken = getTokenConfig("GREY");
 
     logger.info("Using token addresses:", {
       RED: redToken.addr,
+      GREEN: greenToken.addr,
       BLUE: blueToken.addr,
-      PURPLE: purpleToken.addr,
+      WHITE: whiteToken.addr,
+      GREY: greyToken.addr,
     });
 
-    // Configure RED + BLUE → PURPLE rule
-    const result = await setReasoningRule(DEPLOYED_CONTRACT_ADDRESS, {
+    // Configure LIGHT domain rule: RED + GREEN + BLUE → WHITE
+    logger.subsection("Setting LIGHT Domain Rule");
+    const lightResult = await setReasoningRule(DEPLOYED_CONTRACT_ADDRESS, {
       domain: "color",
-      subdomain: "paint",
-      operator: "mix_paint",
-      inputAddresses: [redToken.addr, blueToken.addr],
-      outputAddress: purpleToken.addr,
+      subdomain: "additive",
+      operator: "mix_light",
+      inputAddresses: [redToken.addr, greenToken.addr, blueToken.addr],
+      outputAddress: whiteToken.addr,
       ratioNumerator: 1,
     });
 
-    logger.subsection("Rule Details");
     logger.table({
-      "Rule ID": result.ruleId,
-      "Transaction": result.txHash,
-      "Contract": DEPLOYED_CONTRACT_ADDRESS,
+      "Domain": "LIGHT (color.additive)",
+      "Operation": "RED + GREEN + BLUE → WHITE",
+      "Rule ID": lightResult.ruleId,
+      "Transaction": lightResult.txHash,
     });
 
-    logger.verificationLinks(result.txHash);
+    // Configure PAINT domain rule: RED + GREEN + BLUE → GREY
+    logger.subsection("Setting PAINT Domain Rule");
+    const paintResult = await setReasoningRule(DEPLOYED_CONTRACT_ADDRESS, {
+      domain: "color",
+      subdomain: "subtractive",
+      operator: "mix_paint",
+      inputAddresses: [redToken.addr, greenToken.addr, blueToken.addr],
+      outputAddress: greyToken.addr,
+      ratioNumerator: 1,
+    });
+
+    logger.table({
+      "Domain": "PAINT (color.subtractive)",
+      "Operation": "RED + GREEN + BLUE → GREY",
+      "Rule ID": paintResult.ruleId,
+      "Transaction": paintResult.txHash,
+    });
+
+    logger.subsection("Rules Summary");
+    logger.table({
+      "Contract": DEPLOYED_CONTRACT_ADDRESS,
+      "LIGHT Rule ID": lightResult.ruleId,
+      "PAINT Rule ID": paintResult.ruleId,
+    });
 
     logger.subsection("Next Steps");
-    logger.info("The reasoning rule is now active. You can execute reasoning operations with:");
-    console.log("  node scripts/reason.js");
+    logger.info("Update ACTIVE_RULE_IDS in scripts/lib/config.js with:");
+    console.log(`  LIGHT: "${lightResult.ruleId}",`);
+    console.log(`  PAINT: "${paintResult.ruleId}",`);
+    logger.info("");
+    logger.info("Execute reasoning operations with:");
+    console.log("  node scripts/reason.js --domain light");
+    console.log("  node scripts/reason.js --domain paint");
 
   } catch (err) {
-    logger.error("Failed to set reasoning rule", err);
+    logger.error("Failed to set reasoning rules", err);
     process.exit(1);
   }
 }

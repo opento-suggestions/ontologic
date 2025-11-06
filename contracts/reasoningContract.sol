@@ -10,8 +10,9 @@ pragma solidity ^0.8.20;
  *      Layer 2: TOKENMINT - Mints output tokens via HTS as material consequence
  *      Layer 3: HCS MESSAGE - External proof submission to consensus topic (handled by client)
  *
- * MVP Implementation:
- * - Enforces RED + BLUE → PURPLE rule as proof-of-concept
+ * Alpha v0.3 Implementation:
+ * - Supports 2-token rules (RED + BLUE) and 3-token rules (RED + GREEN + BLUE)
+ * - Enables dual-domain reasoning: Paint (subtractive) and Light (additive)
  * - Uses Hedera Token Service (HTS) precompile for token minting
  * - Emits Reasoned events with proof hash and URI for verification
  * - Soft-gate validation via checksummed EVM addresses
@@ -65,11 +66,15 @@ contract ReasoningContract {
     /// @dev Fixed address on Hedera network
     IHederaTokenService public constant HTS = IHederaTokenService(address(0x167));
 
-    /// @notice EVM address for $RED token (MVP soft-gate)
+    /// @notice EVM address for $RED token (soft-gate)
     /// @dev Checksummed address for 0.0.7204552
     address public constant RED_TOKEN_ADDR = 0x00000000000000000000000000000000006DEeC8;
 
-    /// @notice EVM address for $BLUE token (MVP soft-gate)
+    /// @notice EVM address for $GREEN token (soft-gate)
+    /// @dev Checksummed address for 0.0.7204840
+    address public constant GREEN_TOKEN_ADDR = 0x00000000000000000000000000000000006DEfE8;
+
+    /// @notice EVM address for $BLUE token (soft-gate)
     /// @dev Checksummed address for 0.0.7204565
     address public constant BLUE_TOKEN_ADDR = 0x00000000000000000000000000000000006DEED5;
 
@@ -181,10 +186,10 @@ contract ReasoningContract {
     /**
      * @notice Configure a new reasoning rule
      * @dev Rule ID is computed as keccak256(abi.encode(domain, operator, inputs))
-     * @dev MVP enforces exactly 2 inputs: RED and BLUE tokens
+     * @dev Supports 2-token rules (RED + BLUE) and 3-token rules (RED + GREEN + BLUE)
      * @param domain Domain identifier hash (e.g., keccak256("color.paint"))
      * @param operator Operation identifier hash (e.g., keccak256("mix_paint"))
-     * @param inputs Array of input token addresses (must include RED and BLUE for MVP)
+     * @param inputs Array of input token addresses (2 or 3 tokens required)
      * @param outputToken Address of output token to mint
      * @param ratioNumerator Mint ratio (e.g., 1 means 1:1 ratio)
      * @return ruleId The computed rule identifier
@@ -199,15 +204,26 @@ contract ReasoningContract {
         require(inputs.length >= 1 && inputs.length <= 4, "bad arity");
         require(outputToken != address(0), "no output");
 
-        // MVP soft-gate: enforce RED + BLUE primitive requirement
-        require(inputs.length == 2, "must provide exactly two inputs");
+        // Soft-gate validation: support 2-token and 3-token rules
+        require(inputs.length == 2 || inputs.length == 3, "must provide 2 or 3 inputs");
+
         bool hasRed = false;
+        bool hasGreen = false;
         bool hasBlue = false;
+
         for (uint256 i = 0; i < inputs.length; i++) {
             if (inputs[i] == RED_TOKEN_ADDR) hasRed = true;
+            if (inputs[i] == GREEN_TOKEN_ADDR) hasGreen = true;
             if (inputs[i] == BLUE_TOKEN_ADDR) hasBlue = true;
         }
-        require(hasRed && hasBlue, "missing RED or BLUE");
+
+        // For 2-token rules: require RED + BLUE
+        // For 3-token rules: require RED + GREEN + BLUE
+        if (inputs.length == 2) {
+            require(hasRed && hasBlue, "2-token rules require RED and BLUE");
+        } else if (inputs.length == 3) {
+            require(hasRed && hasGreen && hasBlue, "3-token rules require RED, GREEN, and BLUE");
+        }
 
         // Compute deterministic rule ID
         ruleId = keccak256(abi.encode(domain, operator, inputs));

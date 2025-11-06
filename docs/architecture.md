@@ -1,34 +1,41 @@
 # Ontologic Architecture
 
-**Version**: 1.0 (Post-Refactor)
+**Version**: Alpha v0.3
 **Date**: 2025-11-06
 
 ## Overview
 
-This document describes the refactored architecture of the Ontologic proof-of-reasoning toolkit. The refactor focused on clarity, maintainability, and consistency with modern TypeScript and Hedera Hiero SDK conventions while preserving all logical behaviors.
+This document describes the architecture of the Ontologic proof-of-reasoning toolkit at Alpha v0.3, which introduces **dual-domain reasoning**. This version demonstrates that identical input tokens can produce different outputs based on logical context, establishing composable, domain-scoped proof-of-reasoning at the protocol level.
+
+**Key Innovation**: Same material inputs (RED + GREEN + BLUE) yield different material consequences (WHITE or GREY) depending on the reasoning domain (additive light vs. subtractive paint).
 
 ## Project Structure
 
 ```
 ontologic/
 ├── contracts/
-│   └── reasoningContract.sol      # Core reasoning contract with NatSpec
+│   └── reasoningContract.sol      # Core reasoning contract with NatSpec (Alpha v0.3)
 ├── scripts/
 │   ├── lib/
-│   │   ├── config.js              # Centralized configuration management
+│   │   ├── config.js              # Centralized configuration (dual-domain support)
 │   │   ├── logger.js              # Structured logging utilities
 │   │   └── proof.js               # Canonical proof generation & validation
 │   ├── deploy.js                  # Contract deployment
-│   ├── mint_red.js                # Create $RED token
-│   ├── mint_blue.js               # Create $BLUE token
-│   ├── mint_purple.js             # Create $PURPLE token with contract supply key
+│   ├── mint_red.js                # Create $RED input token
+│   ├── mint_green.js              # Create $GREEN input token
+│   ├── mint_blue.js               # Create $BLUE input token
+│   ├── mint_purple.js             # Create $PURPLE output token (Proof A)
+│   ├── mint_white.js              # Create $WHITE output token (Light domain)
+│   ├── mint_grey.js               # Create $GREY output token (Paint domain)
 │   ├── create_topic.js            # Create HCS topic for proofs
-│   ├── set_rule.js                # Configure reasoning rules
-│   └── reason.js                  # Execute proof-of-reasoning operations
+│   ├── set_rule.js                # Configure dual-domain reasoning rules
+│   └── reason.js                  # Execute proof-of-reasoning with domain selection
 ├── hardhat.config.ts              # Hardhat configuration for Hedera
 ├── package.json                   # Dependencies and scripts
-├── .env                           # Environment configuration
-└── CLAUDE.md                      # Project documentation
+├── .env                           # Environment configuration (6 tokens)
+├── CLAUDE.md                      # Complete project documentation
+├── PROOF_B_REPORT.md              # E2E validation report for dual-domain reasoning
+└── README.md                      # User-facing documentation
 ```
 
 ## Refactor Changes
@@ -198,27 +205,205 @@ const { proof, canonical, hash } = createCanonicalProof({
 });
 ```
 
+## Dual-Domain Architecture (Alpha v0.3)
+
+### Domain Model
+
+Alpha v0.3 introduces **composable domain logic** where the same input tokens produce different outputs based on reasoning context:
+
+**Light Domain (Additive Color Mixing)**
+- **Domain**: `color.additive`
+- **Operator**: `mix_light`
+- **Physical Model**: When red, green, and blue light sources combine, they produce white light
+- **Rule**: RED + GREEN + BLUE → WHITE
+- **Contract Address**: `0xC3Bed03792d94BC3f99eb295bCA1ce7632E7f08B`
+- **Rule ID**: `0xdd1480153360259fb34ae591a5e4be71d81827a82318549ca838be2b91346e65`
+
+**Paint Domain (Subtractive Color Mixing)**
+- **Domain**: `color.subtractive`
+- **Operator**: `mix_paint`
+- **Physical Model**: When red, green, and blue pigments mix, they produce grey/brown
+- **Rule**: RED + GREEN + BLUE → GREY
+- **Contract Address**: `0xC3Bed03792d94BC3f99eb295bCA1ce7632E7f08B`
+- **Rule ID**: `0x4e8881312f98809e731a219db65a5bdf0df53d4e966f948cd11c091e8ae047ea`
+
+### Domain Selection Implementation
+
+**CLI Interface** (`reason.js`):
+```bash
+# Execute light domain reasoning
+node scripts/reason.js --domain light
+
+# Execute paint domain reasoning
+node scripts/reason.js --domain paint
+```
+
+**Domain Configuration Mapping**:
+```javascript
+const DOMAIN_CONFIG = {
+  light: {
+    domain: "color",
+    subdomain: "additive",
+    operator: "mix_light",
+    inputs: ["RED", "GREEN", "BLUE"],
+    output: "WHITE",
+    outputColor: "#FFFFFF",
+  },
+  paint: {
+    domain: "color",
+    subdomain: "subtractive",
+    operator: "mix_paint",
+    inputs: ["RED", "GREEN", "BLUE"],
+    output: "GREY",
+    outputColor: "#808080",
+  },
+};
+```
+
+**Domain Selection Flow**:
+1. Parse `--domain` CLI flag (defaults to "paint")
+2. Load domain-specific configuration from `DOMAIN_CONFIG`
+3. Select appropriate rule ID from `ACTIVE_RULE_IDS`
+4. Generate domain-scoped canonical proof with `subdomain` field
+5. Execute reasoning and mint domain-specific output token
+6. Submit canonical proof to HCS with domain context
+
+### Token Architecture
+
+**Input Tokens (Reusable Across Domains)**:
+- **$RED** (`0.0.7204552`): EVM `0x006deec8`, Metadata: `#FF0000`
+- **$GREEN** (`0.0.7204840`): EVM `0x006defe8`, Metadata: `#00FF00`
+- **$BLUE** (`0.0.7204565`): EVM `0x006deed5`, Metadata: `#0000FF`
+
+**Output Tokens (Domain-Specific)**:
+- **$WHITE** (`0.0.7204868`): EVM `0x006df004`, Light domain output
+- **$GREY** (`0.0.7204885`): EVM `0x006df015`, Paint domain output
+- **$PURPLE** (`0.0.7204602`): EVM `0x006deefa`, Proof A output (RED + BLUE)
+
+All output tokens have **contract as supply key** enabling autonomous minting.
+
+### Canonical Proof Structure (Domain-Scoped)
+
+**Light Domain Example**:
+```json
+{
+  "v": "0",
+  "domain": "color",
+  "subdomain": "additive",
+  "operator": "mix_light",
+  "inputs": [
+    {"token": "0.0.7204552", "alias": "red", "hex": "#FF0000"},
+    {"token": "0.0.7204840", "alias": "green", "hex": "#00FF00"},
+    {"token": "0.0.7204565", "alias": "blue", "hex": "#0000FF"}
+  ],
+  "output": {"token": "0.0.7204868", "alias": "white", "hex": "#FFFFFF"},
+  "ts": "2025-11-06T22:05:35.272Z"
+}
+```
+
+**Proof Hash**: `0x285de51362a08794ad428dcc103fbea005dc8e68546b3cdb7af4a88f092b8ecd`
+
+**Paint Domain Example**:
+```json
+{
+  "v": "0",
+  "domain": "color",
+  "subdomain": "subtractive",
+  "operator": "mix_paint",
+  "inputs": [
+    {"token": "0.0.7204552", "alias": "red", "hex": "#FF0000"},
+    {"token": "0.0.7204840", "alias": "green", "hex": "#00FF00"},
+    {"token": "0.0.7204565", "alias": "blue", "hex": "#0000FF"}
+  ],
+  "output": {"token": "0.0.7204885", "alias": "grey", "hex": "#808080"},
+  "ts": "2025-11-06T22:07:46.055Z"
+}
+```
+
+**Proof Hash**: `0xf746e0d8c8eae3bff01c4c721a840430b393daf5745ea5a2f0d7742386ee912f`
+
+**Key Observation**: Identical inputs produce **completely different proof hashes** based on the `subdomain` and `operator` fields, demonstrating deterministic domain separation at the protocol level.
+
+### Contract Updates for Dual-Domain Support
+
+**3-Token Rule Validation** (`reasoningContract.sol`):
+```solidity
+// Alpha v0.3: Support 2-token and 3-token rules
+require(inputs.length == 2 || inputs.length == 3, "must provide 2 or 3 inputs");
+
+bool hasRed = false;
+bool hasGreen = false;
+bool hasBlue = false;
+
+for (uint256 i = 0; i < inputs.length; i++) {
+    if (inputs[i] == RED_TOKEN_ADDR) hasRed = true;
+    if (inputs[i] == GREEN_TOKEN_ADDR) hasGreen = true;
+    if (inputs[i] == BLUE_TOKEN_ADDR) hasBlue = true;
+}
+
+if (inputs.length == 2) {
+    require(hasRed && hasBlue, "2-token rules require RED and BLUE");
+} else if (inputs.length == 3) {
+    require(hasRed && hasGreen && hasBlue, "3-token rules require RED, GREEN, and BLUE");
+}
+```
+
+**GREEN Token Constant**:
+```solidity
+/// @notice EVM address for $GREEN token (soft-gate)
+/// @dev Checksummed address for 0.0.7204840
+address public constant GREEN_TOKEN_ADDR = 0x00000000000000000000000000000000006DEfE8;
+```
+
+### Domain Separation Properties
+
+**1. Deterministic Proof Hashes**
+- Same inputs → Different hashes based on domain
+- No collision risk between domain proofs
+- Enables domain-specific proof verification
+
+**2. Token Reusability**
+- Physical tokens participate in multiple reasoning contexts
+- No token duplication required
+- Material assets serve different logical purposes
+
+**3. Scalable Domain Registry**
+- Domain hash computed as: `keccak256(abi.encode(domain, operator, inputs))`
+- Enables future on-chain domain registry
+- Supports arbitrary domain namespaces
+
+**4. Composable Reasoning Chains**
+- Future proofs can reference outputs from multiple domains
+- Example: WHITE + GREY → new composite token
+- Enables cross-domain reasoning logic
+
 ## Three-Layer Provenance Architecture
 
-The refactored code clearly documents each layer:
+The dual-domain implementation maintains complete provenance across all three layers:
 
 ### Layer 1: CONTRACTCALL (Logical Validation)
 **Location**: `reasoningContract.sol`
-- Validates input token balances
-- Enforces reasoning rules
-- Performs address-based token checks
+- Validates input token balances for all required tokens
+- Enforces domain-specific reasoning rules
+- Supports both 2-token and 3-token rule validation
+- Performs checksummed address-based token checks (RED, GREEN, BLUE)
+- Domain hash validation ensures rule-domain consistency
 
 ### Layer 2: TOKENMINT (Material Consequence)
-**Location**: `reasoningContract.sol` + HTS precompile
-- Mints output token via HTS
-- Requires contract supply key permissions
-- Provides material proof of valid reasoning
+**Location**: `reasoningContract.sol` + HTS precompile (0x167)
+- Mints domain-specific output token via HTS
+- Output varies by domain: WHITE (light), GREY (paint), PURPLE (proof A)
+- Requires contract supply key permissions for output tokens
+- Provides material proof of valid domain-specific reasoning
+- Gas cost: ~92,710 for 3-token operations
 
 ### Layer 3: HCS MESSAGE (Consensus-Backed Provenance)
-**Location**: `reason.js` → HCS topic
-- Submits canonical proof JSON
-- Creates append-only reasoning record
-- Enables cross-agent shared memory
+**Location**: `reason.js` → HCS topic (0.0.7204585)
+- Submits canonical proof JSON with domain context
+- Creates append-only, domain-scoped reasoning record
+- Proof includes `subdomain` and `operator` fields for domain identification
+- Enables cross-agent shared reasoning memory across domains
+- Distinct proof hashes prevent domain collision
 
 ## Key Design Patterns
 
@@ -248,17 +433,22 @@ const { proof, canonical, hash } = createCanonicalProof(params);
 // No mutations, no external calls
 ```
 
-## Deployment Workflow
+## Deployment Workflow (Alpha v0.3)
 
 ### 1. Initial Setup
 ```bash
-# Deploy contract
+# Deploy contract (Alpha v0.3 with 3-token support)
 node scripts/deploy.js
 
-# Create tokens
+# Create input tokens
 node scripts/mint_red.js
+node scripts/mint_green.js
 node scripts/mint_blue.js
-node scripts/mint_purple.js
+
+# Create output tokens with contract as supply key
+node scripts/mint_purple.js   # For Proof A (RED + BLUE → PURPLE)
+node scripts/mint_white.js    # For Light domain (RED + GREEN + BLUE → WHITE)
+node scripts/mint_grey.js     # For Paint domain (RED + GREEN + BLUE → GREY)
 
 # Create HCS topic
 node scripts/create_topic.js
@@ -266,15 +456,30 @@ node scripts/create_topic.js
 
 ### 2. Configuration
 ```bash
-# Set reasoning rule
+# Set dual-domain reasoning rules
 node scripts/set_rule.js
+# This configures both LIGHT and PAINT domain rules
+# Updates ACTIVE_RULE_IDS in config.js with returned rule IDs
 ```
 
-### 3. Execution
+### 3. Execution (Domain Selection)
 ```bash
-# Perform reasoning operation
-node scripts/reason.js
+# Execute light domain reasoning (additive color mixing)
+node scripts/reason.js --domain light
+
+# Execute paint domain reasoning (subtractive color mixing)
+node scripts/reason.js --domain paint
+
+# Short form
+node scripts/reason.js -d light
 ```
+
+**Output for each execution:**
+- Transaction hash (CONTRACTCALL + TOKENMINT)
+- Canonical proof JSON with domain context
+- Proof hash (domain-specific)
+- HCS submission confirmation
+- Verification links (HashScan, Mirror Node)
 
 ## Environment Variables
 
@@ -283,13 +488,21 @@ All scripts use centralized configuration from `lib/config.js`:
 **Required Variables:**
 - `OPERATOR_ID` - Hedera account
 - `OPERATOR_DER_KEY` - SDK format key
-- `OPERATOR_HEX_KEY` - EVM format key
+- `OPERATOR_HEX_KEY` - EVM format key (0x...)
 - `OPERATOR_EVM_ADDR` - EVM address
-- `HEDERA_RPC_URL` - JSON-RPC endpoint
-- `RED_TOKEN_ID` / `RED_ADDR` - Token configuration
-- `BLUE_TOKEN_ID` / `BLUE_ADDR` - Token configuration
-- `PURPLE_TOKEN_ID` / `PURPLE_ADDR` - Token configuration
-- `HCS_TOPIC_ID` - Consensus topic
+- `HEDERA_RPC_URL` - JSON-RPC endpoint (testnet: https://testnet.hashio.io/api)
+- `MIRROR_NODE_URL` - Mirror node API endpoint
+
+**Token Configuration (Alpha v0.3 - 6 tokens):**
+- `RED_TOKEN_ID` / `RED_ADDR` - Input token
+- `GREEN_TOKEN_ID` / `GREEN_ADDR` - Input token (added in v0.3)
+- `BLUE_TOKEN_ID` / `BLUE_ADDR` - Input token
+- `PURPLE_TOKEN_ID` / `PURPLE_ADDR` - Output token (Proof A)
+- `WHITE_TOKEN_ID` / `WHITE_ADDR` - Output token (Light domain)
+- `GREY_TOKEN_ID` / `GREY_ADDR` - Output token (Paint domain)
+
+**HCS Configuration:**
+- `HCS_TOPIC_ID` - Consensus topic for reasoning proofs
 
 ## Testing Approach
 
@@ -308,26 +521,86 @@ assert(result.txHash);
 assert(result.canonical);
 ```
 
-## Future Enhancements
+## Future Enhancements (Proof C Scope)
 
-### Hooks Integration (HIP-1195)
-The architecture is "hooks-ready":
-- Pre-hook for validation
-- Post-hook for automatic HCS submission
-- No breaking changes required
-
-### Multi-Rule Support
-Current soft-gate can be removed:
+### 1. Cross-Domain Composition
+Enable proofs that reference outputs from multiple domains:
 ```solidity
-// Remove MVP constraint
-// require(hasRed && hasBlue, "missing RED or BLUE");
+// Example: Compose outputs from different domains
+// WHITE (light domain) + GREY (paint domain) → new composite token
+function composeFromDomains(
+    address[] calldata domainOutputs,
+    address compositeToken
+) external returns (uint64 minted);
 ```
 
-### Batch Operations
-Export structure enables batch reasoning:
+**Benefits:**
+- Reasoning chains that span logical contexts
+- Domain interoperability at the protocol level
+- Hierarchical proof structures
+
+### 2. Dynamic Domain Registration
+Move from hardcoded domains to on-chain domain registry:
+```solidity
+struct DomainMetadata {
+    string name;
+    string description;
+    address registrar;
+    uint64 timestamp;
+    bool active;
+}
+
+mapping(bytes32 => DomainMetadata) public domains;
+
+function registerDomain(
+    string calldata domainPath,
+    string calldata description
+) external returns (bytes32 domainHash);
+```
+
+**Benefits:**
+- Register new domains without contract redeployment
+- Namespace management and collision prevention
+- Domain permissions and governance
+
+### 3. Multi-Domain Rules
+Support rules that combine logic from multiple domains:
 ```javascript
-for (const rule of rules) {
-  await performReasoning({ ruleId: rule.id, inputUnits: 10 });
+// Example configuration
+const crossDomainRule = {
+  domains: ["color.additive", "physics.optics"],
+  operator: "refract_light",
+  inputs: ["WHITE", "PRISM"],
+  outputs: ["RED", "GREEN", "BLUE"], // Multiple outputs
+};
+```
+
+### 4. Domain Metadata Extension
+Extend domain definitions with richer metadata:
+```javascript
+const domainMetadata = {
+  domain: "color.additive",
+  description: "Additive color mixing (light sources)",
+  units: "wavelength_nm",
+  validationSchema: "ipfs://Qm...",
+  dependencies: ["physics.optics"],
+  registeredBy: "0x...",
+  registeredAt: 1730923200,
+};
+```
+
+### 5. Hooks Integration (HIP-1195)
+The architecture is "hooks-ready":
+- **Pre-hook**: Domain registry validation before execution
+- **Post-hook**: Automatic HCS submission with domain context
+- **No breaking changes** required when HIP-1195 activates
+
+### 6. Batch Operations
+Export structure enables batch domain reasoning:
+```javascript
+// Execute multiple domain proofs in sequence
+for (const domain of ["light", "paint"]) {
+  await performReasoning({ domain, inputUnits: 10 });
 }
 ```
 
@@ -375,12 +648,46 @@ All sensitive operations validate required environment variables before executio
 
 ## Conclusion
 
-The refactor successfully modernizes the Ontologic codebase while preserving all logical behaviors. The new architecture provides:
+**Alpha v0.3 successfully demonstrates composable dual-domain reasoning on Hedera**, establishing a foundation for multi-context proof-of-reasoning systems.
 
-✅ **Clarity**: Well-documented, organized code
+### Key Achievements
+
+✅ **Domain Scoping Works**: Same inputs produce different outputs based on reasoning context
+- Light domain: RED + GREEN + BLUE → WHITE (`0x285de...b8ecd`)
+- Paint domain: RED + GREEN + BLUE → GREY (`0xf746e...e912f`)
+
+✅ **Complete Provenance**: All three layers validated for both domains
+- Layer 1: Contract validates domain-specific rules
+- Layer 2: HTS mints domain-specific output tokens
+- Layer 3: HCS records domain-scoped canonical proofs
+
+✅ **Deterministic Domain Separation**: Canonical proof hashes uniquely identify domain-specific operations
+- No collision risk between domain proofs
+- Protocol-level domain identification
+
+✅ **Token Reusability**: Physical tokens participate in multiple logical contexts
+- No duplication of material assets required
+- Composable reasoning across domains
+
+✅ **Scalable Architecture**: Predictable gas costs and flexible validation
+- Gas cost: ~92,710 for 3-token operations (~17% more than 2-token)
+- Support for arbitrary input arity (2-token, 3-token, future N-token)
+
+### Architecture Quality
+
+✅ **Clarity**: Well-documented, organized code with comprehensive NatSpec
 ✅ **Maintainability**: DRY principles and modular design
 ✅ **Consistency**: Uniform patterns across all scripts
-✅ **Extensibility**: Easy to add new features
-✅ **Testability**: Programmatic exports enable testing
+✅ **Extensibility**: Ready for cross-domain composition (Proof C)
+✅ **Testability**: Programmatic exports enable comprehensive testing
 
-The codebase is now production-ready and follows modern JavaScript/Solidity best practices for Hedera development.
+### Production Readiness
+
+The codebase follows modern JavaScript/Solidity best practices for Hedera development and is **hackathon-ready** with:
+- Complete E2E validation (see [PROOF_B_REPORT.md](../PROOF_B_REPORT.md))
+- Live deployment on Hedera testnet
+- Verified transactions on HashScan
+- HCS consensus records for both domains
+- Full documentation suite (CLAUDE.md, README.md, architecture.md)
+
+**Next Evolution**: Proof C will explore cross-domain composition, dynamic domain registration, and multi-domain reasoning chains.

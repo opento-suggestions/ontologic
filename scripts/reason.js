@@ -15,6 +15,7 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { parseArgs } from "node:util";
 import {
   Client,
   PrivateKey,
@@ -26,7 +27,7 @@ import {
   getTokenConfig,
   getHcsTopicId,
   DEPLOYED_CONTRACT_ADDRESS,
-  ACTIVE_RULE_ID,
+  ACTIVE_RULE_IDS,
 } from "./lib/config.js";
 import { createCanonicalProof } from "./lib/proof.js";
 import * as logger from "./lib/logger.js";
@@ -135,32 +136,77 @@ async function executeReasoning(params) {
 }
 
 /**
+ * Domain configuration mapping
+ * @constant {Object}
+ */
+const DOMAIN_CONFIG = {
+  light: {
+    domain: "color",
+    subdomain: "additive",
+    operator: "mix_light",
+    inputs: ["RED", "GREEN", "BLUE"],
+    output: "WHITE",
+    outputColor: "#FFFFFF",
+  },
+  paint: {
+    domain: "color",
+    subdomain: "subtractive",
+    operator: "mix_paint",
+    inputs: ["RED", "GREEN", "BLUE"],
+    output: "GREY",
+    outputColor: "#808080",
+  },
+};
+
+/**
  * Perform a complete proof-of-reasoning operation
  * @param {Object} options - Operation options
+ * @param {('light'|'paint')} [options.domain='paint'] - Reasoning domain
  * @param {number} [options.inputUnits=1] - Number of input units to process
- * @param {string} [options.ruleId=ACTIVE_RULE_ID] - Rule ID to use
+ * @param {string} [options.ruleId] - Rule ID to use (optional, will use domain-specific rule)
  * @returns {Promise<{txHash: string, proof: Object, canonical: string}>} Operation result
  * @throws {Error} If operation fails
  */
 async function performReasoning(options = {}) {
+  const domain = options.domain || "paint";
   const inputUnits = options.inputUnits || 1;
-  const ruleId = options.ruleId || ACTIVE_RULE_ID;
+
+  // Get domain configuration
+  const domainConfig = DOMAIN_CONFIG[domain];
+  if (!domainConfig) {
+    throw new Error(`Invalid domain: ${domain}. Must be 'light' or 'paint'`);
+  }
+
+  // Get rule ID for domain
+  const ruleId = options.ruleId || ACTIVE_RULE_IDS[domain.toUpperCase()];
+  if (!ruleId) {
+    throw new Error(`No rule ID configured for domain: ${domain}`);
+  }
 
   // Get token configurations
-  const redToken = getTokenConfig("RED");
-  const blueToken = getTokenConfig("BLUE");
-  const purpleToken = getTokenConfig("PURPLE");
+  const inputTokens = domainConfig.inputs.map(tokenName => {
+    const token = getTokenConfig(tokenName);
+    const colors = { RED: "#FF0000", GREEN: "#00FF00", BLUE: "#0000FF" };
+    return {
+      token: token.id,
+      alias: tokenName.toLowerCase(),
+      hex: colors[tokenName],
+    };
+  });
+
+  const outputToken = getTokenConfig(domainConfig.output);
 
   // Create canonical proof
   const { proof, canonical, hash: proofHash } = createCanonicalProof({
-    domain: "color",
-    subdomain: "paint",
-    operator: "mix_paint",
-    inputs: [
-      { token: redToken.id, alias: "red", hex: "#FF0000" },
-      { token: blueToken.id, alias: "blue", hex: "#0000FF" },
-    ],
-    output: { token: purpleToken.id, alias: "purple", hex: "#800080" },
+    domain: domainConfig.domain,
+    subdomain: domainConfig.subdomain,
+    operator: domainConfig.operator,
+    inputs: inputTokens,
+    output: {
+      token: outputToken.id,
+      alias: domainConfig.output.toLowerCase(),
+      hex: domainConfig.outputColor,
+    },
   });
 
   logger.info("Canonical proof generated", {
@@ -192,15 +238,36 @@ async function performReasoning(options = {}) {
  */
 async function main() {
   try {
-    logger.section("Ontologic Proof-of-Reasoning");
-
-    logger.info("Using configuration:", {
-      contract: DEPLOYED_CONTRACT_ADDRESS,
-      ruleId: ACTIVE_RULE_ID,
-      operation: "RED + BLUE → PURPLE",
+    // Parse command-line arguments
+    const args = parseArgs({
+      options: {
+        domain: { type: "string", short: "d" },
+      },
+      strict: false,
     });
 
-    const result = await performReasoning({ inputUnits: 1 });
+    const domain = args.values.domain || "paint";
+
+    // Validate domain
+    if (!["light", "paint"].includes(domain)) {
+      throw new Error(`Invalid domain: ${domain}. Must be 'light' or 'paint'`);
+    }
+
+    const domainConfig = DOMAIN_CONFIG[domain];
+    const operation = `${domainConfig.inputs.join(" + ")} → ${domainConfig.output}`;
+
+    logger.section("Ontologic Proof-of-Reasoning (Alpha v0.3)");
+
+    logger.info("Domain selected:", { domain: domain.toUpperCase() });
+    logger.info("Using configuration:", {
+      contract: DEPLOYED_CONTRACT_ADDRESS,
+      domain: domainConfig.domain,
+      subdomain: domainConfig.subdomain,
+      operator: domainConfig.operator,
+      operation,
+    });
+
+    const result = await performReasoning({ domain, inputUnits: 1 });
 
     logger.subsection("Canonical Proof JSON");
     console.log(result.canonical);
@@ -209,12 +276,12 @@ async function main() {
 
     logger.subsection("Three-Layer Provenance Complete");
     logger.table({
-      "1. CONTRACTCALL": "✓ Validated RED + BLUE",
-      "2. TOKENMINT": "✓ Minted PURPLE",
+      "1. CONTRACTCALL": `✓ Validated ${domainConfig.inputs.join(" + ")}`,
+      "2. TOKENMINT": `✓ Minted ${domainConfig.output}`,
       "3. HCS MESSAGE": "✓ Consensus-backed proof",
     });
 
-    logger.success("Proof-of-reasoning operation complete!");
+    logger.success(`${domain.toUpperCase()} domain proof-of-reasoning complete!`);
 
   } catch (err) {
     logger.error("Reasoning operation failed", err);

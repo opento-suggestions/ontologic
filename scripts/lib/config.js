@@ -80,7 +80,7 @@ export function getNetworkConfig() {
 
 /**
  * Get token configuration from environment
- * @param {('RED'|'BLUE'|'PURPLE')} tokenName - Token name
+ * @param {('RED'|'GREEN'|'BLUE'|'PURPLE'|'WHITE'|'GREY')} tokenName - Token name
  * @returns {TokenConfig}
  */
 export function getTokenConfig(tokenName) {
@@ -104,16 +104,19 @@ export function getHcsTopicId() {
 }
 
 /**
- * Deployed contract address (from CLAUDE.md)
+ * Deployed contract address (Alpha v0.3)
  * @constant {string}
  */
-export const DEPLOYED_CONTRACT_ADDRESS = "0xC739f496E8dbc146a54fDBF47080AE557FF8Ea27";
+export const DEPLOYED_CONTRACT_ADDRESS = "0xC3Bed03792d94BC3f99eb295bCA1ce7632E7f08B";
 
 /**
- * Active rule ID (from CLAUDE.md)
- * @constant {string}
+ * Active rule IDs (Alpha v0.3 - Dual-Domain)
+ * @constant {Object}
  */
-export const ACTIVE_RULE_ID = "0xf2f46b98fc2fc538ecffaca7cdc83e722b23beeba55aa086b5c916a49ef943bd";
+export const ACTIVE_RULE_IDS = {
+  LIGHT: "0xdd1480153360259fb34ae591a5e4be71d81827a82318549ca838be2b91346e65",  // RED + GREEN + BLUE → WHITE
+  PAINT: "0x4e8881312f98809e731a219db65a5bdf0df53d4e966f948cd11c091e8ae047ea",  // RED + GREEN + BLUE → GREY
+};
 
 /**
  * Schema hash for reasoning protocol v0
