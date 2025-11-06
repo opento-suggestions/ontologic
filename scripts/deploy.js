@@ -1,45 +1,144 @@
+/**
+ * @fileoverview Deploy ReasoningContract to Hedera testnet
+ * @module scripts/deploy
+ *
+ * This script deploys the core ReasoningContract smart contract to Hedera testnet.
+ * The contract implements Layer 1 (CONTRACTCALL) and Layer 2 (TOKENMINT) of the
+ * three-layer provenance architecture.
+ *
+ * Deployment process:
+ * 1. Compile contract (npx hardhat compile)
+ * 2. Generate schema hash for reasoning protocol v0
+ * 3. Deploy contract with schema hash as constructor parameter
+ * 4. Output contract address for configuration
+ */
+
 import { ethers } from "ethers";
-import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
-dotenv.config();
+import { getOperatorConfig, getNetworkConfig } from "./lib/config.js";
+import * as logger from "./lib/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function main() {
-  // Connect to Hedera testnet via Hiero JSON-RPC
-  const RPC_URL = process.env.HEDERA_RPC_URL || "https://testnet.hashio.io/api";
-  const provider = new ethers.JsonRpcProvider(RPC_URL);
-  const wallet = new ethers.Wallet(process.env.OPERATOR_HEX_KEY, provider);
+/**
+ * Deploy the ReasoningContract to Hedera
+ * @param {string} [schemaIdentifier="reasoning.v0"] - Schema identifier for versioning
+ * @returns {Promise<{address: string, schemaHash: string, txHash: string}>} Deployment details
+ * @throws {Error} If deployment fails
+ */
+async function deployReasoningContract(schemaIdentifier = "reasoning.v0") {
+  const operatorConfig = getOperatorConfig();
+  const networkConfig = getNetworkConfig();
 
-  console.log("Deploying from account:", wallet.address);
-  console.log("Using RPC endpoint:", RPC_URL);
+  // Connect to network
+  const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
+  const wallet = new ethers.Wallet(operatorConfig.hexKey, provider);
 
-  // Load compiled contract
-  const artifactPath = path.join(__dirname, "..", "artifacts", "contracts", "reasoningContract.sol", "ReasoningContract.json");
+  logger.info("Deploying ReasoningContract...", {
+    deployer: wallet.address,
+    network: "Hedera Testnet",
+    rpcUrl: networkConfig.rpcUrl,
+  });
+
+  // Load compiled contract artifact
+  const artifactPath = path.join(
+    __dirname,
+    "..",
+    "artifacts",
+    "contracts",
+    "reasoningContract.sol",
+    "ReasoningContract.json"
+  );
+
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error(
+      "Contract artifact not found. Please compile the contract first:\n" +
+      "  npx hardhat compile"
+    );
+  }
+
   const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-  // Create contract factory
-  const ReasoningContract = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+  // Generate schema hash for reasoning protocol
+  const schemaHash = ethers.keccak256(ethers.toUtf8Bytes(schemaIdentifier));
+  logger.info("Reasoning schema hash computed", {
+    identifier: schemaIdentifier,
+    hash: schemaHash,
+  });
 
-  // Generate schema hash and deploy
-  const schemaHash = ethers.keccak256(ethers.toUtf8Bytes("reasoning.v0"));
-  console.log("Schema hash:", schemaHash);
+  // Create contract factory and deploy
+  const factory = new ethers.ContractFactory(
+    artifact.abi,
+    artifact.bytecode,
+    wallet
+  );
 
-  const contract = await ReasoningContract.deploy(schemaHash);
+  logger.info("Submitting deployment transaction...");
+  const contract = await factory.deploy(schemaHash);
+
+  logger.info("Waiting for deployment confirmation...");
   await contract.waitForDeployment();
 
-  const contractAddress = await contract.getAddress();
-  console.log("✅ ReasoningContract deployed to:", contractAddress);
-  console.log("\nNext steps:");
-  console.log("1. Grant this contract supply key permissions for $PURPLE token");
-  console.log("2. Use TokenUpdateTransaction to assign", contractAddress, "as supply key");
+  const address = await contract.getAddress();
+  const deployTx = contract.deploymentTransaction();
+
+  logger.success("ReasoningContract deployed!", {
+    address,
+    schemaHash,
+    txHash: deployTx?.hash || "N/A",
+  });
+
+  return {
+    address,
+    schemaHash,
+    txHash: deployTx?.hash || "",
+  };
 }
 
-main().catch((err) => {
-  console.error("Deploy failed:", err);
-  process.exit(1);
-});
+/**
+ * Main execution function
+ * @returns {Promise<void>}
+ */
+async function main() {
+  try {
+    logger.section("Deploy ReasoningContract");
+
+    const result = await deployReasoningContract();
+
+    logger.subsection("Deployment Complete");
+    logger.table({
+      "Contract Address": result.address,
+      "Schema Hash": result.schemaHash,
+      "Transaction": result.txHash,
+    });
+
+    if (result.txHash) {
+      logger.verificationLinks(result.txHash);
+    }
+
+    logger.subsection("Next Steps");
+    logger.info("1. Grant supply key permissions for $PURPLE token:");
+    console.log(`     Use TokenUpdateTransaction to assign ${result.address} as supply key`);
+    logger.info("\n2. Create $PURPLE token with contract as supply key:");
+    console.log("     node scripts/mint_purple.js");
+    logger.info("\n3. Configure reasoning rule:");
+    console.log("     node scripts/set_rule.js");
+    logger.info("\n4. Update DEPLOYED_CONTRACT_ADDRESS in scripts/lib/config.js");
+
+  } catch (err) {
+    logger.error("Deployment failed", err);
+    process.exit(1);
+  }
+}
+
+// Export for programmatic use
+export { deployReasoningContract };
+
+// Run if executed directly
+if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` ||
+    import.meta.url.endsWith('deploy.js')) {
+  main();
+}
