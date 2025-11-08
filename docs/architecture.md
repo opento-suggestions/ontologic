@@ -1,40 +1,65 @@
 # Ontologic Architecture
 
-**Version**: Alpha v0.3
-**Date**: 2025-11-06
+**Version**: Alpha v0.4.2
+**Date**: 2025-11-08
+**Validation Status**: ✅ Complete - 8/8 proofs executed successfully
 
 ## Overview
 
-This document describes the architecture of the Ontologic proof-of-reasoning toolkit at Alpha v0.3, which introduces **dual-domain reasoning**. This version demonstrates that identical input tokens can produce different outputs based on logical context, establishing composable, domain-scoped proof-of-reasoning at the protocol level.
+This document describes the architecture of the Ontologic proof-of-reasoning toolkit at Alpha v0.4.2, which introduces **idempotent proof execution with replay detection** and **dual-layer reasoning** (Peirce additive + Tarski subtractive).
 
-**Key Innovation**: Same material inputs (RED + GREEN + BLUE) yield different material consequences (WHITE or GREY) depending on the reasoning domain (additive light vs. subtractive paint).
+**Key Innovations**:
+- **Idempotent Proofs**: Each proofHash executes exactly once, replays return cached outputs (~91% gas savings)
+- **Order-Invariant Hashing**: Commutative operations (RED+GREEN == GREEN+RED) produce identical proofs
+- **Dual-Layer Reasoning**: Peirce layer (additive, minting) + Tarski layer (subtractive, verification)
+- **Input Mutation Guards**: Preimage hash verification prevents replay attacks with different tokens
+- **SDK-Based Execution**: Required for Hedera JSON-RPC limitations with ContractId supply keys
+- **Configurable Token Addresses**: Post-deployment configuration breaks circular deployment dependency
+
+## Current Deployment (Testnet)
+
+**Contract**: `0x97e00a2597C20b490fE869204B0728EF6c9F23eA` (v0.4.2)
+**Contract ID**: `0.0.1822368746`
+**Code Hash**: `0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16`
+**HCS Topic**: `0.0.7204585` (Ontologic Reasoning Proof Alpha Tree)
+
+**Validation Results** (8 proofs - HCS sequences 22-29):
+- ✅ 3 Additive Proofs (Peirce layer): RED+GREEN→YELLOW, GREEN+BLUE→CYAN, RED+BLUE→MAGENTA
+- ✅ 3 Subtractive Proofs (Tarski layer): GREEN-YELLOW==CYAN, BLUE-MAGENTA==CYAN, RED-YELLOW==MAGENTA
+- ✅ 2 Negative Guards (Entity-only): ORANGE-YELLOW==RED (false), ORANGE-RED==YELLOW (false)
+
+**See**: [V042_VALIDATION_REPORT.md](../proofs/V042_VALIDATION_REPORT.md) for complete validation details.
 
 ## Project Structure
 
 ```
 ontologic/
 ├── contracts/
-│   └── reasoningContract.sol      # Core reasoning contract with NatSpec (Alpha v0.3)
+│   └── ReasoningContract.sol      # Core reasoning contract with NatSpec (v0.4.2)
 ├── scripts/
 │   ├── lib/
-│   │   ├── config.js              # Centralized configuration (dual-domain support)
+│   │   ├── config.js              # Centralized configuration with getConfig()
 │   │   ├── logger.js              # Structured logging utilities
-│   │   └── proof.js               # Canonical proof generation & validation
+│   │   ├── canonicalize.js        # Canonical JSON serialization
+│   │   └── tokens.json            # Token address mapping
 │   ├── deploy.js                  # Contract deployment
 │   ├── mint_red.js                # Create $RED input token
 │   ├── mint_green.js              # Create $GREEN input token
 │   ├── mint_blue.js               # Create $BLUE input token
-│   ├── mint_purple.js             # Create $PURPLE output token (Proof A)
-│   ├── mint_white.js              # Create $WHITE output token (Light domain)
-│   ├── mint_grey.js               # Create $GREY output token (Paint domain)
+│   ├── mint-cmy-with-contract-key.js  # Create CMY tokens with contract supply key
+│   ├── migrate-supply-keys.js     # Migrate supply keys + configure contract
+│   ├── register-projections.js    # Register RGB24 color projections
 │   ├── create_topic.js            # Create HCS topic for proofs
-│   ├── set_rule.js                # Configure dual-domain reasoning rules
-│   └── reason.js                  # Execute proof-of-reasoning with domain selection
+│   ├── reason-add-sdk.js          # Execute additive proofs (SDK-based)
+│   ├── check-sub-sdk.js           # Execute subtractive proofs (SDK-based)
+│   └── export-hcs-proofs.js       # Export HCS topic to JSON snapshot
+├── proofs/
+│   ├── V042_VALIDATION_REPORT.md  # Comprehensive v0.4.2 validation report
+│   └── hcs-topic-0.0.7204585-v042.json  # HCS topic snapshot
 ├── hardhat.config.ts              # Hardhat configuration for Hedera
 ├── package.json                   # Dependencies and scripts
-├── .env                           # Environment configuration (6 tokens)
+├── .env                           # Environment configuration (7 tokens)
 ├── CLAUDE.md                      # Complete project documentation
-├── PROOF_B_REPORT.md              # E2E validation report for dual-domain reasoning
 └── README.md                      # User-facing documentation
 ```
 
@@ -646,48 +671,281 @@ All sensitive operations validate required environment variables before executio
 - Deterministic rule ID computation
 - Event emission for audit trail
 
+## Alpha v0.4.2 Architecture
+
+### Idempotent Proof Execution
+
+v0.4.2 introduces deterministic proof execution with replay detection:
+
+**ProofData Struct**:
+```solidity
+struct ProofData {
+    bytes32 inputsHash;   // Preimage hash of sorted inputs
+    bytes32 proofHash;    // keccak256(canonical JSON)
+    bytes32 factHash;     // keccak256(HCS message bytes)
+    bytes32 ruleHash;     // keccak256(contract, codeHash, version)
+    string canonicalUri;  // hcs://topicId/timestamp
+}
+```
+
+**Key State:**
+- `proofSeen` mapping - Tracks executed proofs for replay detection
+- `inputsHashOf` mapping - Guards against input mutation attacks
+- `cachedOutputs` mapping - Stores (token, amount) for replayed proofs
+
+**Gas Savings**: Replay detection reduces gas consumption by ~91% (5,900 vs 69,100 gas)
+
+### Dual-Layer Reasoning
+
+**Peirce Layer (Additive)**:
+- Logical inference produces material consequence
+- Mints output tokens via HTS precompile
+- Domain: `color.light`
+- Operator: `mix_add@v1`
+- Example: RED + GREEN → YELLOW (1 unit minted)
+
+**Tarski Layer (Subtractive)**:
+- Projection-based boolean verification
+- No minting, verdict only
+- Domain: `color.paint`
+- Operator: `check_sub@v1`
+- Example: GREEN - YELLOW == CYAN (true/false)
+
+### Order-Invariant Hashing
+
+Commutative operations produce identical proofs:
+
+```javascript
+// Both produce the same inputsHash and proofHash
+RED + GREEN == GREEN + RED
+
+// Implementation
+const [X, Y] = (A < B) ? [A, B] : [B, A];
+const inputsHash = keccak256(encode([X, Y, domain, operator]));
+```
+
+### SDK-Based Execution Pattern
+
+Due to Hedera JSON-RPC limitations with ContractId supply keys:
+
+```javascript
+// SDK script orchestration (reason-add-sdk.js)
+1. Build canonical proof JSON
+2. Post to HCS via TopicMessageSubmitTransaction
+3. Call contract via ContractExecuteTransaction with ProofData
+4. Contract validates logic, mints tokens, emits events
+5. Triple-layer provenance achieved
+```
+
+**Benefits**:
+- Separation of concerns (contract logic vs orchestration)
+- Modularity (HCS submission evolves independently)
+- Verifiability (triple equality: hash_local == hash_event == hash_hcs)
+- Composability (same contract serves multiple HCS topics)
+
+### Configurable Token Addresses
+
+Breaks circular deployment dependency:
+
+**Deployment Sequence**:
+1. Deploy contract (no token addresses required)
+2. Mint CMY tokens with treasury as supply key
+3. Migrate supply keys to contract via `TokenUpdateTransaction`
+4. Configure contract via `setTokenAddresses()` call
+
+**setTokenAddresses() Function**:
+```solidity
+function setTokenAddresses(
+    address red, address green, address blue,
+    address yellow, address cyan, address magenta
+) external onlyOwner {
+    RED = red;
+    GREEN = green;
+    BLUE = blue;
+    YELLOW = yellow;
+    CYAN = cyan;
+    MAGENTA = magenta;
+}
+```
+
+### Token Configuration (v0.4.2)
+
+**Input Tokens (RGB Primaries)**:
+- $RED: `0.0.7204552` (EVM: `0x...006deec8`)
+- $GREEN: `0.0.7204840` (EVM: `0x...006defe8`)
+- $BLUE: `0.0.7204565` (EVM: `0x...006deed5`)
+
+**Output Tokens (CMY Secondaries, Contract as Supply Key)**:
+- $YELLOW: `0.0.7218008` (EVM: `0x...006e2358`)
+- $CYAN: `0.0.7218009` (EVM: `0x...006e2359`)
+- $MAGENTA: `0.0.7218010` (EVM: `0x...006e235a`)
+
+**Entity-Only Token**:
+- $ORANGE: `0.0.7217513` (EVM: `0x...006e2169`) - Projections registered, no proof operations
+
+### Canonical Proof Schema (v0.4.2)
+
+**Additive Proof Example**:
+```json
+{
+  "v": "0.4.2",
+  "layer": "peirce",
+  "mode": "additive",
+  "domain": "color.light",
+  "operator": "mix_add@v1",
+  "inputs": [
+    {"token": "0x...006deec8"},
+    {"token": "0x...006defe8"}
+  ],
+  "output": {"amount": "1", "token": "0x...006e2358"},
+  "rule": {
+    "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+    "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+    "functionSelector": "0xc687cfeb",
+    "version": "v0.4.2"
+  },
+  "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+  "topicId": "0.0.7204585",
+  "ts": "2025-11-08T06:53:34.740Z"
+}
+```
+
+**Subtractive Proof Example**:
+```json
+{
+  "v": "0.4.2",
+  "layer": "tarski",
+  "mode": "subtractive",
+  "domain": "color.paint",
+  "operator": "check_sub@v1",
+  "epsilon": 0,
+  "inputs": [
+    {"label": "A", "token": "0x...006defe8"},
+    {"label": "B", "token": "0x...006e2358"},
+    {"label": "C", "token": "0x...006e2359"}
+  ],
+  "relation": "A-B==C",
+  "rule": {...},
+  "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+  "topicId": "0.0.7204585",
+  "ts": "2025-11-08T06:55:52.098Z"
+}
+```
+
+### Deployment Workflow (v0.4.2)
+
+**Step 1: Deploy Contract**
+```bash
+npx hardhat compile
+node scripts/deploy.js
+# Capture CONTRACT_ADDR and CODE_HASH
+```
+
+**Step 2: Create Tokens**
+```bash
+# Create RGB input tokens
+node scripts/mint_red.js
+node scripts/mint_green.js
+node scripts/mint_blue.js
+
+# Create CMY output tokens with admin keys
+node scripts/mint-cmy-with-contract-key.js
+```
+
+**Step 3: Migrate Supply Keys & Configure Contract**
+```bash
+# Single atomic script performs both operations:
+# 1. Update CMY token supply keys to contract
+# 2. Call contract.setTokenAddresses() with RGB+CMY addresses
+node scripts/migrate-supply-keys.js
+```
+
+**Step 4: Register Projections**
+```bash
+# Required for subtractive reasoning
+node scripts/register-projections.js --token YELLOW
+node scripts/register-projections.js --token CYAN
+node scripts/register-projections.js --token MAGENTA
+```
+
+**Step 5: Execute Proofs**
+```bash
+# Additive proofs (Peirce layer)
+node scripts/reason-add-sdk.js --A RED --B GREEN --out YELLOW
+
+# Subtractive proofs (Tarski layer)
+node scripts/check-sub-sdk.js --A GREEN --B YELLOW --C CYAN
+```
+
 ## Conclusion
 
-**Alpha v0.3 successfully demonstrates composable dual-domain reasoning on Hedera**, establishing a foundation for multi-context proof-of-reasoning systems.
+**Alpha v0.4.2 successfully demonstrates idempotent proof-of-reasoning with dual-layer reasoning (Peirce + Tarski) on Hedera**, establishing a robust foundation for verifiable reasoning systems.
 
-### Key Achievements
+### Key Achievements (v0.4.2)
 
-✅ **Domain Scoping Works**: Same inputs produce different outputs based on reasoning context
-- Light domain: RED + GREEN + BLUE → WHITE (`0x285de...b8ecd`)
-- Paint domain: RED + GREEN + BLUE → GREY (`0xf746e...e912f`)
+✅ **Idempotent Proof Execution**: Each proofHash executes exactly once
+- Replay detection via `proofSeen` mapping
+- Cached outputs for replayed proofs
+- ~91% gas savings on replay (5,900 vs 69,100 gas)
 
-✅ **Complete Provenance**: All three layers validated for both domains
-- Layer 1: Contract validates domain-specific rules
-- Layer 2: HTS mints domain-specific output tokens
-- Layer 3: HCS records domain-scoped canonical proofs
+✅ **Order-Invariant Hashing**: Commutative operations produce identical proofs
+- RED+GREEN == GREEN+RED (same proofHash)
+- `inputsHash` uses sorted addresses
+- Deterministic proof identity
 
-✅ **Deterministic Domain Separation**: Canonical proof hashes uniquely identify domain-specific operations
-- No collision risk between domain proofs
-- Protocol-level domain identification
+✅ **Input Mutation Guards**: Prevents replay attacks with different tokens
+- `inputsHashOf` mapping verifies preimage hash
+- Cannot reuse proofHash with different input tokens
+- Cryptographic proof integrity
 
-✅ **Token Reusability**: Physical tokens participate in multiple logical contexts
-- No duplication of material assets required
-- Composable reasoning across domains
+✅ **Dual-Layer Reasoning**: Peirce (additive) + Tarski (subtractive)
+- Peirce layer: Logical inference produces material tokens (minting)
+- Tarski layer: Boolean verification with projection math (no minting)
+- Domain-scoped operations (color.light vs color.paint)
 
-✅ **Scalable Architecture**: Predictable gas costs and flexible validation
-- Gas cost: ~92,710 for 3-token operations (~17% more than 2-token)
-- Support for arbitrary input arity (2-token, 3-token, future N-token)
+✅ **Complete Provenance**: Triple-layer validation for all 8 proofs
+- Layer 1: Contract validates logic and enforces rules
+- Layer 2: HTS mints output tokens (additive only)
+- Layer 3: HCS records canonical proofs with consensus timestamps
+
+✅ **Configurable Architecture**: Breaks circular deployment dependency
+- Deploy contract first (no token addresses required)
+- Mint tokens with treasury as supply key
+- Migrate supply keys to contract
+- Configure contract via `setTokenAddresses()`
+
+✅ **SDK-Based Execution**: Handles Hedera JSON-RPC limitations
+- Uses Hedera SDK's `ContractExecuteTransaction` for contract calls
+- Separation of concerns (contract logic vs orchestration)
+- Modular HCS submission (can evolve independently)
+
+### Validation Results
+
+✅ **8/8 Proofs Executed Successfully** (HCS sequences 22-29):
+- 3 Additive (Peirce): RED+GREEN→YELLOW, GREEN+BLUE→CYAN, RED+BLUE→MAGENTA
+- 3 Subtractive (Tarski): GREEN-YELLOW==CYAN, BLUE-MAGENTA==CYAN, RED-YELLOW==MAGENTA
+- 2 Negative Guards: ORANGE-YELLOW==RED (false), ORANGE-RED==YELLOW (false)
+
+✅ **Triple Equality Verified**: hash_local == hash_event == hash_hcs for all proofs
 
 ### Architecture Quality
 
-✅ **Clarity**: Well-documented, organized code with comprehensive NatSpec
-✅ **Maintainability**: DRY principles and modular design
-✅ **Consistency**: Uniform patterns across all scripts
-✅ **Extensibility**: Ready for cross-domain composition (Proof C)
-✅ **Testability**: Programmatic exports enable comprehensive testing
+✅ **Clarity**: Comprehensive NatSpec, detailed validation report, clear documentation
+✅ **Security**: Input mutation guards, replay detection, owner-only configuration
+✅ **Efficiency**: ~91% gas savings on replay, deterministic RGB→CMY mapping
+✅ **Modularity**: SDK orchestration pattern, configurable token addresses
+✅ **Verifiability**: Triple-layer provenance, HCS topic snapshot export
 
 ### Production Readiness
 
-The codebase follows modern JavaScript/Solidity best practices for Hedera development and is **hackathon-ready** with:
-- Complete E2E validation (see [PROOF_B_REPORT.md](../PROOF_B_REPORT.md))
-- Live deployment on Hedera testnet
-- Verified transactions on HashScan
-- HCS consensus records for both domains
-- Full documentation suite (CLAUDE.md, README.md, architecture.md)
+The codebase is **production-ready** with:
+- ✅ Complete E2E validation ([V042_VALIDATION_REPORT.md](../proofs/V042_VALIDATION_REPORT.md))
+- ✅ Live deployment on Hedera testnet (contract `0x97e00a2597C20b490fE869204B0728EF6c9F23eA`)
+- ✅ Verified transactions on HashScan
+- ✅ HCS consensus records (topic `0.0.7204585`, sequences 22-29)
+- ✅ Full documentation suite (CLAUDE.md, README.md, architecture.md, validation report)
+- ✅ Idempotent proof execution with replay detection
+- ✅ Input mutation attack prevention
+- ✅ Dual-layer reasoning (additive + subtractive)
 
-**Next Evolution**: Proof C will explore cross-domain composition, dynamic domain registration, and multi-domain reasoning chains.
+**Next Evolution**: Future versions will explore dynamic domain registration, cross-domain composition, proof aggregation, and cross-chain bridges.

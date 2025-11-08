@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ontologic.network/schemas/reasoning_v0_4.json",
+  "title": "Reasoning Proof Schema v0.4",
+  "description": "Canonical proof format for Peirce (additive) and Tarski (subtractive) reasoning",
+  "type": "object",
+  "required": [
+    "v",
+    "layer",
+    "mode",
+    "domain",
+    "operator",
+    "inputs",
+    "rule",
+    "topicId",
+    "ts",
+    "signer"
+  ],
+  "properties": {
+    "v": {
+      "type": "string",
+      "const": "0.4",
+      "description": "Schema version"
+    },
+    "layer": {
+      "type": "string",
+      "enum": ["peirce", "tarski"],
+      "description": "Epistemic layer: peirce (additive) or tarski (subtractive)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["additive", "subtractive"],
+      "description": "Reasoning mode: additive (mint) or subtractive (check)"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain identifier (e.g., 'color', 'color.light', 'color.paint')"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "Subdomain identifier (e.g., 'additive', 'subtractive')"
+    },
+    "operator": {
+      "type": "string",
+      "description": "Operation identifier (e.g., 'mix_light', 'check_sub')"
+    },
+    "relation": {
+      "type": "string",
+      "description": "Optional symbolic relation (e.g., 'A-B==C' for subtractive check)"
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Input tokens with metadata",
+      "items": {
+        "type": "object",
+        "required": ["token"],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Hedera token ID (e.g., '0.0.7204552')"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Token alias (e.g., 'red')"
+          },
+          "hex": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "description": "RGB hex color (e.g., '#FF0000')"
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output token (for additive mode)",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Hedera token ID"
+        },
+        "alias": {
+          "type": "string",
+          "description": "Token alias"
+        },
+        "hex": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "RGB hex color"
+        }
+      }
+    },
+    "verdict": {
+      "type": "boolean",
+      "description": "Boolean result (for subtractive mode)"
+    },
+    "epsilon": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Epsilon tolerance for subtractive checks (default: 0 for exact match)"
+    },
+    "rule": {
+      "type": "object",
+      "description": "Rule metadata (contract, code hash, function selector)",
+      "required": ["contract", "codeHash", "functionSelector", "version"],
+      "properties": {
+        "contract": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "description": "Contract EVM address"
+        },
+        "codeHash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$",
+          "description": "keccak256 hash of deployed contract bytecode"
+        },
+        "functionSelector": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{8}$",
+          "description": "Function selector (first 4 bytes of keccak256 of signature)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Rule version identifier (e.g., 'v0.4', 'check_sub@v1')"
+        }
+      }
+    },
+    "topicId": {
+      "type": "string",
+      "pattern": "^0\\.0\\.[0-9]+$",
+      "description": "HCS topic ID (e.g., '0.0.7204585')"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "signer": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$",
+      "description": "EVM address of proof signer/submitter"
+    },
+    "nonce": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Nonce for replay protection (optional)"
+    },
+    "attestation": {
+      "type": "string",
+      "description": "Optional signature or attestation over canonical proof (optional)"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Optional agent identifier or version"
+    }
+  },
+  "additionalProperties": false
+}

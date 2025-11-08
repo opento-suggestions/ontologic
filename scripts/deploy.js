@@ -120,13 +120,24 @@ async function main() {
     }
 
     logger.subsection("Next Steps");
-    logger.info("1. Grant supply key permissions for $PURPLE token:");
-    console.log(`     Use TokenUpdateTransaction to assign ${result.address} as supply key`);
-    logger.info("\n2. Create $PURPLE token with contract as supply key:");
-    console.log("     node scripts/mint_purple.js");
-    logger.info("\n3. Configure reasoning rule:");
-    console.log("     node scripts/set_rule.js");
-    logger.info("\n4. Update DEPLOYED_CONTRACT_ADDRESS in scripts/lib/config.js");
+    logger.info("1. Update DEPLOYED_CONTRACT_ADDRESS in scripts/lib/config.js:");
+    console.log(`     CONTRACT_ADDR="${result.address}"`);
+    logger.info("\n2. Create or verify token existence (RGB + CMY):");
+    console.log("     node scripts/mint_red.js");
+    console.log("     node scripts/mint_green.js");
+    console.log("     node scripts/mint_blue.js");
+    console.log("     node scripts/mint_yellow.js");
+    console.log("     node scripts/mint_cyan.js");
+    console.log("     node scripts/mint_magenta.js");
+    logger.info("\n3. Migrate supply keys and configure contract:");
+    console.log("     node scripts/migrate-supply-keys.js");
+    logger.info("\n   This will:");
+    console.log(`     - Grant ${result.address} as supply key for CMY tokens`);
+    console.log("     - Call setTokenAddresses() to configure token references");
+    logger.info("\n4. Register projections for subtractive reasoning:");
+    console.log("     node scripts/register-projections.js --token YELLOW");
+    console.log("     node scripts/register-projections.js --token CYAN");
+    console.log("     node scripts/register-projections.js --token MAGENTA");
 
   } catch (err) {
     logger.error("Deployment failed", err);

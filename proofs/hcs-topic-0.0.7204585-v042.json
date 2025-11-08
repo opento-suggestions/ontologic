@@ -1,0 +1,345 @@
+{
+  "meta": {
+    "exportedAt": "2025-11-08T07:04:06.736Z",
+    "topicId": "0.0.7204585",
+    "version": "v0.4.2",
+    "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+    "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16"
+  },
+  "summary": {
+    "topic": "0.0.7204585",
+    "description": "Ontologic Reasoning Proof Alpha Tree - v0.4.2 Validation",
+    "version": "v0.4.2",
+    "totalProofs": 8,
+    "sequences": {
+      "start": 22,
+      "end": 29
+    },
+    "layers": {
+      "peirce": 3,
+      "tarski": 5
+    },
+    "modes": {
+      "additive": 3,
+      "subtractive": 5
+    }
+  },
+  "proofs": [
+    {
+      "sequence": 22,
+      "consensusTimestamp": "1762584813.625947855",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "AQFnF3cN8qsjXnA4XEXfLZyOWOlROaJDOSAH85J0pYBwF8CTc+jTuFmotJ75/fEi",
+      "runningHashVersion": 3,
+      "messageSize": 599,
+      "proofHash": "0x598c435839105128e6885a516bf83657de63ccb0cba827e968fd4b5062f47246",
+      "proof": {
+        "domain": "color.light",
+        "inputs": [
+          {
+            "token": "0x00000000000000000000000000000000006deec8"
+          },
+          {
+            "token": "0x00000000000000000000000000000000006defe8"
+          }
+        ],
+        "layer": "peirce",
+        "mode": "additive",
+        "operator": "mix_add@v1",
+        "output": {
+          "amount": "1",
+          "token": "0x00000000000000000000000000000000006e2358"
+        },
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0xc687cfeb",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:53:34.740Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 23,
+      "consensusTimestamp": "1762584848.310900900",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "vjl1jfV4r+70Kj2ldAgO6IzM27Ei+BaYGax1K89zJuZjk3mS+Lgk8HuX9ND6o7IK",
+      "runningHashVersion": 3,
+      "messageSize": 599,
+      "proofHash": "0x67271680c4f08c460dc1a8d2b727c3472f649b4e022462a97aeb235b373d2782",
+      "proof": {
+        "domain": "color.light",
+        "inputs": [
+          {
+            "token": "0x00000000000000000000000000000000006defe8"
+          },
+          {
+            "token": "0x00000000000000000000000000000000006deed5"
+          }
+        ],
+        "layer": "peirce",
+        "mode": "additive",
+        "operator": "mix_add@v1",
+        "output": {
+          "amount": "1",
+          "token": "0x00000000000000000000000000000000006e2359"
+        },
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0xc687cfeb",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:54:09.440Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 24,
+      "consensusTimestamp": "1762584879.851017000",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "yGT5hHr2Xfaa5uXZQOP+EHoQ2WowA6T2QVgVqSd9KiExwo9pGU4K3+5J7/sX7ElJ",
+      "runningHashVersion": 3,
+      "messageSize": 599,
+      "proofHash": "0x6fe2369c6a9cb6ebbc5c9240458bfb6be571dfaf4e201ff2f176d518ce386a4f",
+      "proof": {
+        "domain": "color.light",
+        "inputs": [
+          {
+            "token": "0x00000000000000000000000000000000006deec8"
+          },
+          {
+            "token": "0x00000000000000000000000000000000006deed5"
+          }
+        ],
+        "layer": "peirce",
+        "mode": "additive",
+        "operator": "mix_add@v1",
+        "output": {
+          "amount": "1",
+          "token": "0x00000000000000000000000000000000006e235a"
+        },
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0xc687cfeb",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:54:40.957Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 25,
+      "consensusTimestamp": "1762584951.970287012",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "2cBw/X2BLVFObgP4kS41dyoW1HIoAVlhm9+cKOsthzGt6YowL+TQc9iqsZLex4n4",
+      "runningHashVersion": 3,
+      "messageSize": 650,
+      "proofHash": "0x36f1ddd815ea8b6956d1881804fa1e238c08579b5ac6094b572c12839b91c3c9",
+      "proof": {
+        "domain": "color.paint",
+        "epsilon": 0,
+        "inputs": [
+          {
+            "label": "A",
+            "token": "0x00000000000000000000000000000000006defe8"
+          },
+          {
+            "label": "B",
+            "token": "0x00000000000000000000000000000000006e2358"
+          },
+          {
+            "label": "C",
+            "token": "0x00000000000000000000000000000000006e2359"
+          }
+        ],
+        "layer": "tarski",
+        "mode": "subtractive",
+        "operator": "check_sub@v1",
+        "relation": "A-B==C",
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0x72775a9b",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:55:52.977Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 26,
+      "consensusTimestamp": "1762584965.392486782",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "a8sqJyVM+ZP0h0BwJFZIg8fwEL64N1HbVVerHYJo+qY4xSn9NF3G4YfO3RgOef0s",
+      "runningHashVersion": 3,
+      "messageSize": 650,
+      "proofHash": "0x3c6eab0aaad86053088751fc47a934775db36694c10bfed41b513e9237477dc1",
+      "proof": {
+        "domain": "color.paint",
+        "epsilon": 0,
+        "inputs": [
+          {
+            "label": "A",
+            "token": "0x00000000000000000000000000000000006deed5"
+          },
+          {
+            "label": "B",
+            "token": "0x00000000000000000000000000000000006e235a"
+          },
+          {
+            "label": "C",
+            "token": "0x00000000000000000000000000000000006e2359"
+          }
+        ],
+        "layer": "tarski",
+        "mode": "subtractive",
+        "operator": "check_sub@v1",
+        "relation": "A-B==C",
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0x72775a9b",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:56:06.460Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 27,
+      "consensusTimestamp": "1762584970.552832158",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "rmyF0XoJb0lpVqd7mPZJ9vcHp+yKdiV//USNjCvtgHM2PVOqnBGomQg1zlpvl5EU",
+      "runningHashVersion": 3,
+      "messageSize": 650,
+      "proofHash": "0x00f1f8eee407858132a4fabadfebae876aba3c587421b33153d9b6a18d6dfe36",
+      "proof": {
+        "domain": "color.paint",
+        "epsilon": 0,
+        "inputs": [
+          {
+            "label": "A",
+            "token": "0x00000000000000000000000000000000006deec8"
+          },
+          {
+            "label": "B",
+            "token": "0x00000000000000000000000000000000006e2358"
+          },
+          {
+            "label": "C",
+            "token": "0x00000000000000000000000000000000006e235a"
+          }
+        ],
+        "layer": "tarski",
+        "mode": "subtractive",
+        "operator": "check_sub@v1",
+        "relation": "A-B==C",
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0x72775a9b",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:56:11.593Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 28,
+      "consensusTimestamp": "1762584975.595039000",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "baJD3IkkxwrPjxK3T+mcD8rBYq47NpQKYNtSQU65ve4d0XsxRHQRDndOHvVGYcjl",
+      "runningHashVersion": 3,
+      "messageSize": 650,
+      "proofHash": "0xb8d7a0078be8b583bd994348e6a470a771ca483703c3510537f790a06a4aef75",
+      "proof": {
+        "domain": "color.paint",
+        "epsilon": 0,
+        "inputs": [
+          {
+            "label": "A",
+            "token": "0x00000000000000000000000000000000006e2169"
+          },
+          {
+            "label": "B",
+            "token": "0x00000000000000000000000000000000006e2358"
+          },
+          {
+            "label": "C",
+            "token": "0x00000000000000000000000000000000006deec8"
+          }
+        ],
+        "layer": "tarski",
+        "mode": "subtractive",
+        "operator": "check_sub@v1",
+        "relation": "A-B==C",
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0x72775a9b",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:56:16.729Z",
+        "v": "0.4.2"
+      }
+    },
+    {
+      "sequence": 29,
+      "consensusTimestamp": "1762584980.632723000",
+      "payerAccountId": "0.0.6748221",
+      "runningHash": "wh/URXhqYmTqdvzbqSefII+u8ibXnEdPMaWjfP30ovEiGf5badS4ASdlclURjX9Z",
+      "runningHashVersion": 3,
+      "messageSize": 650,
+      "proofHash": "0x3035b5d6800ac25a227939ca6a7b91064f8be73789fa5e46d003e328ec3ad782",
+      "proof": {
+        "domain": "color.paint",
+        "epsilon": 0,
+        "inputs": [
+          {
+            "label": "A",
+            "token": "0x00000000000000000000000000000000006e2169"
+          },
+          {
+            "label": "B",
+            "token": "0x00000000000000000000000000000000006deec8"
+          },
+          {
+            "label": "C",
+            "token": "0x00000000000000000000000000000000006e2358"
+          }
+        ],
+        "layer": "tarski",
+        "mode": "subtractive",
+        "operator": "check_sub@v1",
+        "relation": "A-B==C",
+        "rule": {
+          "codeHash": "0xc33f4e5747d3ef237fab636a0336e471cc6fa748d9c87c4c94351b6cd9e2ba16",
+          "contract": "0x97e00a2597c20b490fe869204b0728ef6c9f23ea",
+          "functionSelector": "0x72775a9b",
+          "version": "v0.4.2"
+        },
+        "signer": "0xf14e3ebf486da30f7295119051a053d167b7eb5e",
+        "topicId": "0.0.7204585",
+        "ts": "2025-11-08T06:56:21.778Z",
+        "v": "0.4.2"
+      }
+    }
+  ]
+}

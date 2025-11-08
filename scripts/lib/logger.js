@@ -73,6 +73,14 @@ export function error(message, error) {
 }
 
 /**
+ * Log a JSON line (for machine-readable output)
+ * @param {Object} obj - Object to log as JSON
+ */
+export function line(obj) {
+  console.log(JSON.stringify(obj));
+}
+
+/**
  * Log a section header for better output organization
  * @param {string} title - Section title
  */
