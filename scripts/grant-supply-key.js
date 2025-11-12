@@ -24,7 +24,7 @@ function arg(name, d=null){ const i=process.argv.indexOf(name); return i<0?d:pro
 const TOKEN_SYM = arg("--token");
 
 if (!TOKEN_SYM) {
-  console.error("usage: node scripts/grant-supply-key.js --token <YELLOW|CYAN|MAGENTA|ORANGE>");
+  console.error("usage: node scripts/grant-supply-key.js --token <YELLOW|CYAN|MAGENTA|ORANGE|PURPLE>");
   process.exit(1);
 }
 
@@ -33,11 +33,12 @@ const TOKEN_ID_MAP = {
   CYAN: process.env.CYAN_TOKEN_ID,
   MAGENTA: process.env.MAGENTA_TOKEN_ID,
   ORANGE: process.env.ORANGE_TOKEN_ID,
+  PURPLE: process.env.PURPLE_TOKEN_ID,
 };
 
 const tokenId = TOKEN_ID_MAP[TOKEN_SYM.toUpperCase()];
 if (!tokenId) {
-  console.error(`Unknown token: ${TOKEN_SYM}. Must be YELLOW, CYAN, MAGENTA, or ORANGE`);
+  console.error(`Unknown token: ${TOKEN_SYM}. Must be YELLOW, CYAN, MAGENTA, ORANGE, or PURPLE`);
   process.exit(1);
 }
 

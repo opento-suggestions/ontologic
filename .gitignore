@@ -36,3 +36,4 @@ printf "%s\n" \
 ".DS_Store" \
 > .gitignore
 node_modules
+.env

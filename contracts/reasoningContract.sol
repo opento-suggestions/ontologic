@@ -10,7 +10,7 @@ pragma solidity ^0.8.20;
  *      Layer 2: TOKENMINT - Mints output tokens via HTS as material consequence
  *      Layer 3: HCS MESSAGE - External proof submission to consensus topic (handled by client)
  *
- * Alpha v0.4.2 Implementation (Triad + Replay):
+ * Alpha v0.4.5 Implementation (Extended Token Support):
  * - ProofAdd (Peirce): Additive reasoning with token minting
  * - ProofCheck (Tarski): Subtractive reasoning with boolean verdict
  * - ProofEntity (Floridi): Entity manifest publication with projections
@@ -19,6 +19,7 @@ pragma solidity ^0.8.20;
  * - Subtractive math: LIGHT (channelwise RGB), PAINT (CMY model)
  * - Triple-equality: hash_local == hash_event == hash_hcs
  * - Canonical proof caching: One proof per (domain, operator, inputs)
+ * - 9-token configuration: RGB+CMY+WHITE+GREY+PURPLE
  */
 
 /**
@@ -100,6 +101,18 @@ contract ReasoningContract {
     /// @notice EVM address for $MAGENTA token (RGB+CMY secondary)
     /// @dev Configurable post-deployment, initialized to zero
     address public MAGENTA_TOKEN_ADDR;
+
+    /// @notice EVM address for $WHITE token (derived output)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public WHITE_TOKEN_ADDR;
+
+    /// @notice EVM address for $GREY token (derived output)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public GREY_TOKEN_ADDR;
+
+    /// @notice EVM address for $PURPLE token (derived output)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public PURPLE_TOKEN_ADDR;
 
     /// @notice Contract owner (can set rules and update schema)
     address public owner;
@@ -261,6 +274,9 @@ contract ReasoningContract {
      * @param yellow EVM address for YELLOW token
      * @param cyan EVM address for CYAN token
      * @param magenta EVM address for MAGENTA token
+     * @param white EVM address for WHITE token
+     * @param grey EVM address for GREY token
+     * @param purple EVM address for PURPLE token
      */
     event TokenAddressesUpdated(
         address indexed red,
@@ -268,7 +284,10 @@ contract ReasoningContract {
         address indexed blue,
         address yellow,
         address cyan,
-        address magenta
+        address magenta,
+        address white,
+        address grey,
+        address purple
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -308,7 +327,7 @@ contract ReasoningContract {
     }
 
     /**
-     * @notice Configure token addresses post-deployment
+     * @notice Configure token addresses post-deployment (v0.4.5 - 9 tokens)
      * @dev Only callable by owner, breaks circular dependency with token creation
      * @dev This allows contract deployment before tokens are created
      * @param _red EVM address for RED token
@@ -317,6 +336,9 @@ contract ReasoningContract {
      * @param _yellow EVM address for YELLOW token
      * @param _cyan EVM address for CYAN token
      * @param _magenta EVM address for MAGENTA token
+     * @param _white EVM address for WHITE token
+     * @param _grey EVM address for GREY token
+     * @param _purple EVM address for PURPLE token
      */
     function setTokenAddresses(
         address _red,
@@ -324,14 +346,17 @@ contract ReasoningContract {
         address _blue,
         address _yellow,
         address _cyan,
-        address _magenta
+        address _magenta,
+        address _white,
+        address _grey,
+        address _purple
     ) external onlyOwner {
-        require(_red != address(0), "RED cannot be zero");
-        require(_green != address(0), "GREEN cannot be zero");
-        require(_blue != address(0), "BLUE cannot be zero");
-        require(_yellow != address(0), "YELLOW cannot be zero");
-        require(_cyan != address(0), "CYAN cannot be zero");
-        require(_magenta != address(0), "MAGENTA cannot be zero");
+        require(
+            _red != address(0) && _green != address(0) && _blue != address(0) &&
+            _yellow != address(0) && _cyan != address(0) && _magenta != address(0) &&
+            _white != address(0) && _grey != address(0) && _purple != address(0),
+            "zero addr"
+        );
 
         RED_TOKEN_ADDR = _red;
         GREEN_TOKEN_ADDR = _green;
@@ -339,8 +364,11 @@ contract ReasoningContract {
         YELLOW_TOKEN_ADDR = _yellow;
         CYAN_TOKEN_ADDR = _cyan;
         MAGENTA_TOKEN_ADDR = _magenta;
+        WHITE_TOKEN_ADDR = _white;
+        GREY_TOKEN_ADDR = _grey;
+        PURPLE_TOKEN_ADDR = _purple;
 
-        emit TokenAddressesUpdated(_red, _green, _blue, _yellow, _cyan, _magenta);
+        emit TokenAddressesUpdated(_red, _green, _blue, _yellow, _cyan, _magenta, _white, _grey, _purple);
     }
 
     /**
@@ -498,7 +526,7 @@ contract ReasoningContract {
      */
     function _mixAddDeterministic(address A, address B)
         internal
-        pure
+        view
         returns (address outToken, uint64 amount)
     {
         // Sort inputs for order-invariance

@@ -20,6 +20,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
+  Client,
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  PrivateKey,
+  ContractId,
+} from "@hashgraph/sdk";
+import {
   getOperatorConfig,
   getNetworkConfig,
   getTokenConfig,
@@ -50,7 +57,6 @@ const __dirname = path.dirname(__filename);
  */
 async function setReasoningRule(contractAddress, params) {
   const operatorConfig = getOperatorConfig();
-  const networkConfig = getNetworkConfig();
 
   logger.info("Setting reasoning rule on contract...", {
     contract: contractAddress,
@@ -61,38 +67,40 @@ async function setReasoningRule(contractAddress, params) {
     ratio: `${params.ratioNumerator}:1`,
   });
 
-  // Load contract ABI
-  const artifactPath = path.join(
-    __dirname,
-    "..",
-    "artifacts",
-    "contracts",
-    "reasoningContract.sol",
-    "ReasoningContract.json"
-  );
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-
-  // Connect to contract
-  const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
-  const wallet = new ethers.Wallet(operatorConfig.hexKey, provider);
-  const contract = new ethers.Contract(contractAddress, artifact.abi, wallet);
-
   // Compute domain and operator hashes
   const domainHash = ethers.keccak256(
     ethers.toUtf8Bytes(`${params.domain}.${params.subdomain}`)
   );
   const operatorHash = ethers.keccak256(ethers.toUtf8Bytes(params.operator));
 
-  // Call setRule
-  const tx = await contract.setRule(
-    domainHash,
-    operatorHash,
-    params.inputAddresses,
-    params.outputAddress,
-    params.ratioNumerator
+  // Use Hedera SDK for transaction execution
+  const client = Client.forTestnet().setOperator(
+    operatorConfig.id,
+    PrivateKey.fromStringDer(operatorConfig.derKey)
   );
 
-  const receipt = await tx.wait();
+  // Convert contract address to ContractId
+  const evmAddrClean = contractAddress.toLowerCase().replace("0x", "");
+  const entityNum = parseInt(evmAddrClean.slice(-8), 16);
+  const contractId = new ContractId(0, 0, entityNum);
+
+  // Build function parameters
+  const functionParams = new ContractFunctionParameters()
+    .addBytes32(Buffer.from(domainHash.replace("0x", ""), "hex"))
+    .addBytes32(Buffer.from(operatorHash.replace("0x", ""), "hex"))
+    .addAddressArray(params.inputAddresses)
+    .addAddress(params.outputAddress)
+    .addUint64(params.ratioNumerator);
+
+  // Execute via SDK
+  const tx = await new ContractExecuteTransaction()
+    .setContractId(contractId)
+    .setGas(500000)
+    .setFunction("setRule", functionParams)
+    .execute(client);
+
+  const receipt = await tx.getReceipt(client);
+  client.close();
 
   // Compute rule ID (same as contract does)
   const ruleId = ethers.keccak256(
@@ -104,11 +112,11 @@ async function setReasoningRule(contractAddress, params) {
 
   logger.success("Reasoning rule configured", {
     ruleId,
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
+    txHash: tx.transactionId.toString(),
+    status: receipt.status.toString(),
   });
 
-  return { ruleId, txHash: receipt.hash };
+  return { ruleId, txHash: tx.transactionId.toString() };
 }
 
 /**
@@ -117,6 +125,25 @@ async function setReasoningRule(contractAddress, params) {
  */
 async function main() {
   try {
+    // Check for --rule-file flag (data-driven rule registration)
+    const ruleFileIndex = process.argv.indexOf("--rule-file");
+    if (ruleFileIndex >= 0 && process.argv[ruleFileIndex + 1]) {
+      const rulePath = process.argv[ruleFileIndex + 1];
+      const ruleDef = JSON.parse(fs.readFileSync(rulePath, "utf8"));
+      const inputAddrs = ruleDef.inputs.map(sym => getTokenConfig(sym).addr);
+      const outputAddr = getTokenConfig(ruleDef.output).addr;
+
+      const [domain, subdomain] = ruleDef.domain.split(".");
+      const result = await setReasoningRule(DEPLOYED_CONTRACT_ADDRESS, {
+        domain, subdomain, operator: ruleDef.operator,
+        inputAddresses: inputAddrs, outputAddress: outputAddr,
+        ratioNumerator: ruleDef.ratio || 1,
+      });
+
+      console.log(JSON.stringify({ rule: ruleDef.operator, inputs: ruleDef.inputs, output: ruleDef.output, ruleId: result.ruleId, tx: result.txHash }));
+      return;
+    }
+
     logger.section("Set Reasoning Rules (Alpha v0.3 - Dual-Domain)");
 
     // Get token configurations

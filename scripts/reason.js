@@ -20,6 +20,9 @@ import {
   Client,
   PrivateKey,
   TopicMessageSubmitTransaction,
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  ContractId,
 } from "@hashgraph/sdk";
 import {
   getOperatorConfig,
@@ -68,70 +71,66 @@ async function submitProofToHCS(message, topicId) {
 }
 
 /**
- * Execute a reasoning operation on the contract
+ * Execute a reasoning operation on the contract using SDK
  * @param {Object} params - Reasoning parameters
  * @param {string} params.ruleId - Rule ID to execute
  * @param {number} params.inputUnits - Number of input units to process
  * @param {string} params.proofHash - keccak256 hash of canonical proof
  * @param {string} [params.proofURI=""] - Optional IPFS or external proof URI
- * @returns {Promise<{txHash: string, blockNumber: number}>} Transaction details
+ * @returns {Promise<{txHash: string}>} Transaction details
  * @throws {Error} If reasoning operation fails
  */
 async function executeReasoning(params) {
   const operatorConfig = getOperatorConfig();
-  const networkConfig = getNetworkConfig();
 
-  logger.info("Executing reasoning operation...", {
+  logger.info("Executing reasoning operation via SDK...", {
     ruleId: params.ruleId,
     inputUnits: params.inputUnits,
     proofHash: params.proofHash,
   });
 
-  // Load contract ABI
-  const artifactPath = path.join(
-    __dirname,
-    "..",
-    "artifacts",
-    "contracts",
-    "reasoningContract.sol",
-    "ReasoningContract.json"
+  // Use Hedera SDK for transaction execution
+  const client = Client.forTestnet().setOperator(
+    operatorConfig.id,
+    PrivateKey.fromStringDer(operatorConfig.derKey)
   );
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-  // Connect to contract
-  const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
-  const wallet = new ethers.Wallet(operatorConfig.hexKey, provider);
-  const contract = new ethers.Contract(
-    DEPLOYED_CONTRACT_ADDRESS,
-    artifact.abi,
-    wallet
-  );
+  // Convert contract address to ContractId
+  const evmAddrClean = DEPLOYED_CONTRACT_ADDRESS.toLowerCase().replace("0x", "");
+  const entityNum = parseInt(evmAddrClean.slice(-8), 16);
+  const contractId = new ContractId(0, 0, entityNum);
 
   logger.info("Contract call details:", {
-    caller: wallet.address,
+    caller: operatorConfig.id,
     contract: DEPLOYED_CONTRACT_ADDRESS,
+    contractId: `0.0.${entityNum}`,
     operation: "reason()",
   });
 
-  // Execute reason() function
-  const tx = await contract.reason(
-    params.ruleId,
-    BigInt(params.inputUnits),
-    params.proofHash,
-    params.proofURI || ""
-  );
+  // Build function parameters
+  const functionParams = new ContractFunctionParameters()
+    .addBytes32(Buffer.from(params.ruleId.replace("0x", ""), "hex"))
+    .addUint64(params.inputUnits)
+    .addBytes32(Buffer.from(params.proofHash.replace("0x", ""), "hex"))
+    .addString(params.proofURI || "");
 
-  const receipt = await tx.wait();
+  // Execute via SDK
+  const tx = await new ContractExecuteTransaction()
+    .setContractId(contractId)
+    .setGas(500000)
+    .setFunction("reason", functionParams)
+    .execute(client);
 
-  logger.success("Reasoning transaction mined", {
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
-    gasUsed: receipt.gasUsed.toString(),
+  const receipt = await tx.getReceipt(client);
+  client.close();
+
+  logger.success("Reasoning transaction confirmed", {
+    txHash: tx.transactionId.toString(),
+    status: receipt.status.toString(),
   });
 
   return {
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
+    txHash: tx.transactionId.toString(),
   };
 }
 
@@ -242,10 +241,102 @@ async function main() {
     const args = parseArgs({
       options: {
         domain: { type: "string", short: "d" },
+        "rule-file": { type: "string" },
+        "rule-id": { type: "string" },
       },
       strict: false,
     });
 
+    // Check for rule-file based execution (v0.4.5 custom rules)
+    if (args.values["rule-file"]) {
+      const rulePath = args.values["rule-file"];
+      const ruleDef = JSON.parse(fs.readFileSync(rulePath, "utf8"));
+
+      logger.section("Ontologic Proof-of-Reasoning (v0.4.5 - Rule-Based)");
+
+      // Compute ruleId from rule definition
+      const inputAddrs = ruleDef.inputs.map(sym => {
+        const cfg = getTokenConfig(sym);
+        return cfg.addr;
+      });
+      const outputAddr = getTokenConfig(ruleDef.output).addr;
+
+      const [domain, subdomain] = ruleDef.domain.split(".");
+      const domainHash = ethers.keccak256(ethers.toUtf8Bytes(`${domain}.${subdomain}`));
+      const operatorHash = ethers.keccak256(ethers.toUtf8Bytes(ruleDef.operator));
+
+      const ruleId = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["bytes32", "bytes32", "address[]"],
+          [domainHash, operatorHash, inputAddrs]
+        )
+      );
+
+      logger.info("Rule loaded:", {
+        domain: ruleDef.domain,
+        operator: ruleDef.operator,
+        inputs: ruleDef.inputs.join(" + "),
+        output: ruleDef.output,
+        ruleId,
+      });
+
+      // Create canonical proof
+      const inputTokens = ruleDef.inputs.map(sym => {
+        const token = getTokenConfig(sym);
+        const colors = {
+          RED: "#FF0000", GREEN: "#00FF00", BLUE: "#0000FF",
+          YELLOW: "#FFFF00", CYAN: "#00FFFF", MAGENTA: "#FF00FF",
+          PURPLE: "#800080", WHITE: "#FFFFFF", GREY: "#808080", ORANGE: "#FFA500"
+        };
+        return {
+          token: token.id,
+          alias: sym.toLowerCase(),
+          hex: colors[sym],
+        };
+      });
+
+      const outputToken = getTokenConfig(ruleDef.output);
+      const outputColors = {
+        PURPLE: "#800080", WHITE: "#FFFFFF", GREY: "#808080",
+        YELLOW: "#FFFF00", CYAN: "#00FFFF", MAGENTA: "#FF00FF", ORANGE: "#FFA500"
+      };
+
+      const { proof, canonical, hash: proofHash } = createCanonicalProof({
+        domain,
+        subdomain,
+        operator: ruleDef.operator,
+        inputs: inputTokens,
+        output: {
+          token: outputToken.id,
+          alias: ruleDef.output.toLowerCase(),
+          hex: outputColors[ruleDef.output],
+        },
+      });
+
+      logger.info("Canonical proof generated", { proofHash });
+
+      // Execute reasoning via SDK
+      const result = await executeReasoning({
+        ruleId,
+        inputUnits: 1,
+        proofHash,
+        proofURI: "",
+      });
+
+      // Submit to HCS
+      const topicId = getHcsTopicId();
+      await submitProofToHCS(canonical, topicId);
+
+      logger.subsection("Canonical Proof JSON");
+      console.log(canonical);
+
+      logger.verificationLinks(result.txHash, topicId);
+
+      logger.success("Rule-based proof-of-reasoning complete!");
+      return;
+    }
+
+    // Legacy domain-based execution (v0.3 compatibility)
     const domain = args.values.domain || "paint";
 
     // Validate domain

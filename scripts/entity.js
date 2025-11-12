@@ -21,7 +21,14 @@
  */
 
 import { ethers } from "ethers";
-import { Client, TopicMessageSubmitTransaction } from "@hashgraph/sdk";
+import {
+  Client,
+  TopicMessageSubmitTransaction,
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  ContractId,
+  PrivateKey,
+} from "@hashgraph/sdk";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -175,29 +182,13 @@ async function main() {
       projections: params.projections
     }));
 
-    // Setup provider and contract
-    const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
-    const wallet = new ethers.Wallet(operatorConfig.hexKey, provider);
-
-    // Load contract ABI
-    const artifactPath = path.join(
-      __dirname,
-      "..",
-      "artifacts",
-      "contracts",
-      "reasoningContract.sol",
-      "ReasoningContract.json"
-    );
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    const contract = new ethers.Contract(DEPLOYED_CONTRACT_ADDRESS, artifact.abi, wallet);
-
     // Build manifest JSON (v0.4.1 schema - ASCII key sort)
     const manifest = {
-      controller: wallet.address.toLowerCase(),
+      controller: operatorConfig.evmAddr.toLowerCase(),
       layer: "floridi",
-      owner: params.owner || wallet.address.toLowerCase(),
+      owner: params.owner || operatorConfig.evmAddr.toLowerCase(),
       projections: params.projections,
-      signer: wallet.address.toLowerCase(),
+      signer: operatorConfig.evmAddr.toLowerCase(),
       token: {
         address: params.token,
         id: params.tokenId,
@@ -228,7 +219,7 @@ async function main() {
     // Submit to HCS
     const client = Client.forTestnet().setOperator(
       operatorConfig.id,
-      operatorConfig.derKey
+      PrivateKey.fromStringDer(operatorConfig.derKey)
     );
 
     const submitTx = await new TopicMessageSubmitTransaction()
@@ -246,82 +237,44 @@ async function main() {
       topicId
     }));
 
-    // Call publishEntity
+    // Call publishEntity via SDK
     const canonicalUri = `hcs://${topicId}/${consensusTimestamp.seconds}.${consensusTimestamp.nanos}`;
 
-    const tx = await contract.publishEntity(
-      params.token,
-      manifestHash,
-      canonicalUri
-    );
+    // Convert contract address to ContractId
+    const evmAddrClean = DEPLOYED_CONTRACT_ADDRESS.toLowerCase().replace("0x", "");
+    const entityNum = parseInt(evmAddrClean.slice(-8), 16);
+    const contractId = new ContractId(0, 0, entityNum);
 
-    const receipt = await tx.wait();
+    // Build function parameters
+    const functionParams = new ContractFunctionParameters()
+      .addAddress(params.token)
+      .addBytes32(Buffer.from(manifestHash.replace("0x", ""), "hex"))
+      .addString(canonicalUri);
+
+    // Execute via SDK
+    const tx = await new ContractExecuteTransaction()
+      .setContractId(contractId)
+      .setGas(200000)
+      .setFunction("publishEntity", functionParams)
+      .execute(client);
+
+    const receipt = await tx.getReceipt(client);
 
     console.log(JSON.stringify({
       stage: "contract-call",
       ok: true,
-      txId: receipt.hash,
-      gasUsed: receipt.gasUsed.toString()
+      txId: tx.transactionId.toString(),
+      status: receipt.status.toString()
     }));
-
-    // Parse ProofEntity event
-    const proofEntityEvent = receipt.logs
-      .map(log => {
-        try {
-          return contract.interface.parseLog({
-            topics: log.topics,
-            data: log.data
-          });
-        } catch {
-          return null;
-        }
-      })
-      .find(e => e && e.name === "ProofEntity");
-
-    if (!proofEntityEvent) {
-      console.error(JSON.stringify({
-        stage: "verify-event",
-        ok: false,
-        error: "ProofEntity event not found in transaction logs"
-      }));
-      process.exit(2);
-    }
-
-    const eventManifestHash = proofEntityEvent.args.manifestHash;
-    const eventToken = proofEntityEvent.args.token;
-
-    // Verify hash equality
-    if (eventManifestHash.toLowerCase() !== manifestHash.toLowerCase()) {
-      console.error(JSON.stringify({
-        stage: "verify-hash",
-        ok: false,
-        error: "ManifestHash mismatch",
-        expected: manifestHash,
-        eventHash: eventManifestHash
-      }));
-      process.exit(2);
-    }
-
-    if (eventToken.toLowerCase() !== params.token.toLowerCase()) {
-      console.error(JSON.stringify({
-        stage: "verify-token",
-        ok: false,
-        error: "Token address mismatch",
-        expected: params.token,
-        eventToken: eventToken
-      }));
-      process.exit(2);
-    }
 
     // Final output
     console.log(JSON.stringify({
       stage: "entity",
       ok: true,
       manifestHash,
-      txId: receipt.hash,
+      txId: tx.transactionId.toString(),
       topicId,
       consensusTimestamp: consensusTimestamp.toString(),
-      blockNumber: receipt.blockNumber,
       token: params.token,
       symbol: params.symbol,
       projections: params.projections

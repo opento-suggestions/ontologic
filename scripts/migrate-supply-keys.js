@@ -1,13 +1,17 @@
 /**
- * @fileoverview Migrate token supply keys from treasury to contract
+ * @fileoverview Migrate token supply keys and configure contract (v0.4.5)
  * @module scripts/migrate-supply-keys
  *
  * Usage: node scripts/migrate-supply-keys.js
  *
- * Updates CMY tokens to use the deployed ReasoningContract as supply key.
- * Requires tokens to have admin keys set.
+ * Performs two operations:
+ * 1. Updates CMY+derived tokens to use ReasoningContract as supply key
+ * 2. Calls setTokenAddresses() with all 9 tokens (RGB+CMY+WHITE+GREY+PURPLE)
  */
 
+import { config } from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   Client,
   TokenUpdateTransaction,
@@ -16,39 +20,64 @@ import {
   ContractExecuteTransaction,
   ContractFunctionParameters,
 } from "@hashgraph/sdk";
-import { getOperatorConfig, DEPLOYED_CONTRACT_ADDRESS } from "./lib/config.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env.example
+config({ path: path.join(__dirname, "..", ".env.example") });
+
+// Tokens that need supply key migration (CMY + derived outputs)
 const TOKENS_TO_UPDATE = [
   { symbol: "YELLOW", id: process.env.YELLOW_TOKEN_ID, evmAddr: process.env.YELLOW_ADDR },
   { symbol: "CYAN", id: process.env.CYAN_TOKEN_ID, evmAddr: process.env.CYAN_ADDR },
   { symbol: "MAGENTA", id: process.env.MAGENTA_TOKEN_ID, evmAddr: process.env.MAGENTA_ADDR },
+  // Note: WHITE, GREY, PURPLE already have contract as supply key from creation
 ];
 
-const INPUT_TOKENS = [
+// All 9 tokens for contract configuration (order matters!)
+const ALL_TOKENS = [
   { symbol: "RED", evmAddr: process.env.RED_ADDR },
   { symbol: "GREEN", evmAddr: process.env.GREEN_ADDR },
   { symbol: "BLUE", evmAddr: process.env.BLUE_ADDR },
+  { symbol: "YELLOW", evmAddr: process.env.YELLOW_ADDR },
+  { symbol: "CYAN", evmAddr: process.env.CYAN_ADDR },
+  { symbol: "MAGENTA", evmAddr: process.env.MAGENTA_ADDR },
+  { symbol: "WHITE", evmAddr: process.env.WHITE_ADDR },
+  { symbol: "GREY", evmAddr: process.env.GREY_ADDR },
+  { symbol: "PURPLE", evmAddr: process.env.PURPLE_ADDR },
 ];
 
 async function main() {
-  const operatorConfig = getOperatorConfig();
-  const operatorKey = PrivateKey.fromString(operatorConfig.derKey);
-  const client = Client.forTestnet().setOperator(operatorConfig.id, operatorKey);
+  const operatorId = process.env.OPERATOR_ID;
+  const operatorDerKey = process.env.OPERATOR_DER_KEY;
+  const contractAddr = process.env.CONTRACT_ADDR;
+  const contractIdStr = process.env.CONTRACT_ID;
 
-  // Convert EVM address to ContractId
-  const evmAddrClean = DEPLOYED_CONTRACT_ADDRESS.toLowerCase().replace("0x", "");
-  const entityNumHex = evmAddrClean.slice(-8);
-  const entityNum = parseInt(entityNumHex, 16);
-  const contractKey = new ContractId(0, 0, entityNum);
+  if (!operatorId || !operatorDerKey || !contractAddr || !contractIdStr) {
+    console.error(JSON.stringify({
+      stage: "init",
+      ok: false,
+      error: "Missing required env vars: OPERATOR_ID, OPERATOR_DER_KEY, CONTRACT_ADDR, CONTRACT_ID"
+    }));
+    process.exit(1);
+  }
+
+  const operatorKey = PrivateKey.fromStringDer(operatorDerKey);
+  const client = Client.forTestnet().setOperator(operatorId, operatorKey);
+
+  // Parse contract ID
+  const contractId = ContractId.fromString(contractIdStr);
 
   console.log(JSON.stringify({
     stage: "init",
     ok: true,
-    contract: DEPLOYED_CONTRACT_ADDRESS,
-    contractId: `0.0.${entityNum}`,
-    tokens: TOKENS_TO_UPDATE.map(t => ({symbol: t.symbol, id: t.id}))
+    contract: contractAddr,
+    contractId: contractIdStr,
+    tokensToUpdate: TOKENS_TO_UPDATE.map(t => ({ symbol: t.symbol, id: t.id }))
   }));
 
+  // Step 1: Migrate supply keys for CMY tokens
   for (const token of TOKENS_TO_UPDATE) {
     if (!token.id) {
       console.error(JSON.stringify({
@@ -67,12 +96,12 @@ async function main() {
         action: "submitting",
         symbol: token.symbol,
         tokenId: token.id,
-        newSupplyKey: DEPLOYED_CONTRACT_ADDRESS
+        newSupplyKey: contractAddr
       }));
 
       const updateTx = await new TokenUpdateTransaction()
         .setTokenId(token.id)
-        .setSupplyKey(contractKey)  // Use ContractId key
+        .setSupplyKey(contractId)  // Use ContractId
         .freezeWith(client);
 
       const signedTx = await updateTx.sign(operatorKey);
@@ -99,18 +128,17 @@ async function main() {
     }
   }
 
-  // Step 2: Update contract with token addresses
+  // Step 2: Configure contract with all 9 token addresses
   console.log(JSON.stringify({
     stage: "configure-contract",
     ok: true,
     action: "submitting",
-    message: "Updating contract with token addresses"
+    message: "Updating contract with 9 token addresses (RGB+CMY+WHITE+GREY+PURPLE)"
   }));
 
   try {
     // Validate all required token addresses are present
-    const allTokens = [...INPUT_TOKENS, ...TOKENS_TO_UPDATE];
-    const missingAddrs = allTokens.filter(t => !t.evmAddr);
+    const missingAddrs = ALL_TOKENS.filter(t => !t.evmAddr);
     if (missingAddrs.length > 0) {
       console.error(JSON.stringify({
         stage: "configure-contract",
@@ -121,18 +149,22 @@ async function main() {
       return;
     }
 
+    // Call setTokenAddresses with 9 arguments
     const contractExec = await new ContractExecuteTransaction()
-      .setContractId(contractKey)
-      .setGas(200000)
+      .setContractId(contractId)
+      .setGas(300000)
       .setFunction(
         "setTokenAddresses",
         new ContractFunctionParameters()
-          .addAddress(INPUT_TOKENS[0].evmAddr)  // RED
-          .addAddress(INPUT_TOKENS[1].evmAddr)  // GREEN
-          .addAddress(INPUT_TOKENS[2].evmAddr)  // BLUE
-          .addAddress(TOKENS_TO_UPDATE[0].evmAddr)  // YELLOW
-          .addAddress(TOKENS_TO_UPDATE[1].evmAddr)  // CYAN
-          .addAddress(TOKENS_TO_UPDATE[2].evmAddr)  // MAGENTA
+          .addAddress(ALL_TOKENS[0].evmAddr)  // RED
+          .addAddress(ALL_TOKENS[1].evmAddr)  // GREEN
+          .addAddress(ALL_TOKENS[2].evmAddr)  // BLUE
+          .addAddress(ALL_TOKENS[3].evmAddr)  // YELLOW
+          .addAddress(ALL_TOKENS[4].evmAddr)  // CYAN
+          .addAddress(ALL_TOKENS[5].evmAddr)  // MAGENTA
+          .addAddress(ALL_TOKENS[6].evmAddr)  // WHITE
+          .addAddress(ALL_TOKENS[7].evmAddr)  // GREY
+          .addAddress(ALL_TOKENS[8].evmAddr)  // PURPLE
       )
       .execute(client);
 
@@ -144,12 +176,15 @@ async function main() {
       action: "confirmed",
       status: contractReceipt.status.toString(),
       tokens: {
-        red: INPUT_TOKENS[0].evmAddr,
-        green: INPUT_TOKENS[1].evmAddr,
-        blue: INPUT_TOKENS[2].evmAddr,
-        yellow: TOKENS_TO_UPDATE[0].evmAddr,
-        cyan: TOKENS_TO_UPDATE[1].evmAddr,
-        magenta: TOKENS_TO_UPDATE[2].evmAddr
+        red: ALL_TOKENS[0].evmAddr,
+        green: ALL_TOKENS[1].evmAddr,
+        blue: ALL_TOKENS[2].evmAddr,
+        yellow: ALL_TOKENS[3].evmAddr,
+        cyan: ALL_TOKENS[4].evmAddr,
+        magenta: ALL_TOKENS[5].evmAddr,
+        white: ALL_TOKENS[6].evmAddr,
+        grey: ALL_TOKENS[7].evmAddr,
+        purple: ALL_TOKENS[8].evmAddr
       }
     }));
 
@@ -164,7 +199,7 @@ async function main() {
   console.log(JSON.stringify({
     stage: "complete",
     ok: true,
-    message: "Supply key migration and contract configuration complete"
+    message: "Supply key migration and v0.4.5 contract configuration complete"
   }));
 
   client.close();

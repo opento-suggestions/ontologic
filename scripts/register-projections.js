@@ -10,6 +10,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
+  Client,
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  PrivateKey,
+  ContractId,
+} from "@hashgraph/sdk";
+import {
   getOperatorConfig,
   getNetworkConfig,
   getTokenConfig,
@@ -38,8 +45,20 @@ const TOKEN_MAP = {
 
 // Projection definitions for all tokens
 const PROJECTION_MAP = {
+  RED: [
+    { domain: "color.light", hex: "#FF0000" },
+    { domain: "color.paint", hex: "#FF0000" },
+  ],
+  GREEN: [
+    { domain: "color.light", hex: "#00FF00" },
+    { domain: "color.paint", hex: "#00FF00" },
+  ],
+  BLUE: [
+    { domain: "color.light", hex: "#0000FF" },
+    { domain: "color.paint", hex: "#0000FF" },
+  ],
   PURPLE: [
-    { domain: "color.light", hex: "#FF00FF" },
+    { domain: "color.light", hex: "#800080" },
     { domain: "color.paint", hex: "#800080" },
   ],
   YELLOW: [
@@ -53,6 +72,14 @@ const PROJECTION_MAP = {
   MAGENTA: [
     { domain: "color.light", hex: "#FF00FF" },
     { domain: "color.paint", hex: "#FF00FF" },
+  ],
+  WHITE: [
+    { domain: "color.light", hex: "#FFFFFF" },
+    { domain: "color.paint", hex: "#FFFFFF" },
+  ],
+  GREY: [
+    { domain: "color.light", hex: "#808080" },
+    { domain: "color.paint", hex: "#808080" },
   ],
   ORANGE: [
     { domain: "color.light", hex: "#FFA500" },
@@ -120,7 +147,6 @@ async function main() {
   try {
     const params = parseArgs();
     const operatorConfig = getOperatorConfig();
-    const networkConfig = getNetworkConfig();
 
     console.log(JSON.stringify({
       stage: "init",
@@ -129,22 +155,6 @@ async function main() {
       symbol: params.tokenSym,
       contract: params.contract
     }));
-
-    // Setup provider and contract
-    const provider = new ethers.JsonRpcProvider(networkConfig.rpcUrl);
-    const wallet = new ethers.Wallet(operatorConfig.hexKey, provider);
-
-    // Load contract ABI
-    const artifactPath = path.join(
-      __dirname,
-      "..",
-      "artifacts",
-      "contracts",
-      "reasoningContract.sol",
-      "ReasoningContract.json"
-    );
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-    const contract = new ethers.Contract(params.contract, artifact.abi, wallet);
 
     // Get projection definitions for this token
     const tokenProjections = PROJECTION_MAP[params.tokenSym];
@@ -156,6 +166,17 @@ async function main() {
       }));
       process.exit(1);
     }
+
+    // Setup SDK client
+    const client = Client.forTestnet().setOperator(
+      operatorConfig.id,
+      PrivateKey.fromStringDer(operatorConfig.derKey)
+    );
+
+    // Convert contract address to ContractId
+    const evmAddrClean = params.contract.toLowerCase().replace("0x", "");
+    const entityNum = parseInt(evmAddrClean.slice(-8), 16);
+    const contractId = new ContractId(0, 0, entityNum);
 
     // Projection definitions with RGB24 conversion
     const projections = tokenProjections.map(p => ({
@@ -179,8 +200,20 @@ async function main() {
         token: params.token
       }));
 
-      const tx = await contract.registerProjection(domainHash, params.token, proj.rgb24);
-      const receipt = await tx.wait();
+      // Build function parameters
+      const functionParams = new ContractFunctionParameters()
+        .addBytes32(Buffer.from(domainHash.replace("0x", ""), "hex"))
+        .addAddress(params.token)
+        .addUint24(proj.rgb24);
+
+      // Execute via SDK
+      const tx = await new ContractExecuteTransaction()
+        .setContractId(contractId)
+        .setGas(200000)
+        .setFunction("registerProjection", functionParams)
+        .execute(client);
+
+      const receipt = await tx.getReceipt(client);
 
       console.log(JSON.stringify({
         stage: "register-projection",
@@ -189,11 +222,12 @@ async function main() {
         domain: proj.domain,
         rgbHex: proj.hex,
         token: params.token,
-        txHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-        gasUsed: receipt.gasUsed.toString()
+        txHash: tx.transactionId.toString(),
+        status: receipt.status.toString()
       }));
     }
+
+    client.close();
 
     // Final summary
     console.log(JSON.stringify({

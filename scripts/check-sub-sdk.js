@@ -1,6 +1,6 @@
 // scripts/check-sub-sdk.js
-// Usage: node scripts/check-sub-sdk.js --A GREEN --B YELLOW --C CYAN
-// Subtractive check: A - B == C in paint domain
+// Usage: node scripts/check-sub-sdk.js --A WHITE --B GREEN --C PURPLE --domain color.light
+// Subtractive check: A - B == C in specified domain (color.light or color.paint)
 
 import { readFileSync } from "fs";
 import { ethers } from "ethers";
@@ -14,10 +14,16 @@ function arg(name, d=null){ const i=process.argv.indexOf(name); return i<0?d:pro
 const A_SYM = arg("--A");
 const B_SYM = arg("--B");
 const C_SYM = arg("--C");
+const DOMAIN = arg("--domain");
 const EPSILON = parseInt(arg("--epsilon", "0"));
 
-if (!A_SYM || !B_SYM || !C_SYM) {
-  console.error("usage: node scripts/check-sub-sdk.js --A <TOKEN> --B <TOKEN> --C <TOKEN> [--epsilon N]");
+if (!A_SYM || !B_SYM || !C_SYM || !DOMAIN) {
+  console.error("usage: node scripts/check-sub-sdk.js --A <TOKEN> --B <TOKEN> --C <TOKEN> --domain <color.light|color.paint> [--epsilon N]");
+  process.exit(1);
+}
+
+if (!["color.light", "color.paint"].includes(DOMAIN)) {
+  console.error("error: --domain must be 'color.light' or 'color.paint'");
   process.exit(1);
 }
 
@@ -29,14 +35,14 @@ const A = addrOf(A_SYM);
 const B = addrOf(B_SYM);
 const C = addrOf(C_SYM);
 
-const D_PAINT = ethers.keccak256(ethers.toUtf8Bytes("color.paint"));
+const domainHash = ethers.keccak256(ethers.toUtf8Bytes(DOMAIN));
 const OP_SUB  = ethers.keccak256(ethers.toUtf8Bytes("check_sub@v1"));
 
 const payload = {
   v: "0.4.2",
   layer: "tarski",
   mode: "subtractive",
-  domain: "color.paint",
+  domain: DOMAIN,
   operator: "check_sub@v1",
   inputs: [{ label: "A", token: A.toLowerCase() }, { label: "B", token: B.toLowerCase() }, { label: "C", token: C.toLowerCase() }],
   epsilon: EPSILON,
@@ -64,7 +70,7 @@ const canonicalUri = `hcs://${cfg.hcsTopicId}/${hcsMeta.consensusTimestamp}`;
 // inputsHash for subtractive: keccak(A, B, C, domain, operator)
 const inputsPreimage = ethers.AbiCoder.defaultAbiCoder().encode(
   ["address","address","address","bytes32","bytes32"],
-  [A, B, C, D_PAINT, OP_SUB]
+  [A, B, C, domainHash, OP_SUB]
 );
 const inputsHash = ethers.keccak256(inputsPreimage);
 
@@ -85,7 +91,7 @@ const params = new ContractFunctionParameters()
   .addAddress(A)
   .addAddress(B)
   .addAddress(C)
-  .addBytes32(Buffer.from(D_PAINT.replace("0x", ""), "hex"))
+  .addBytes32(Buffer.from(domainHash.replace("0x", ""), "hex"))
   .addBytes32(Buffer.from(inputsHash.replace("0x", ""), "hex"))
   .addBytes32(Buffer.from(kCanon.replace("0x", ""), "hex"))
   .addBytes32(Buffer.from(factHash.replace("0x", ""), "hex"))
@@ -116,7 +122,7 @@ try {
     ok:true,
     proofHash:kCanon,
     inputsHash,
-    domain:"color.paint",
+    domain:DOMAIN,
     relation:`${A_SYM}-${B_SYM}==${C_SYM}`,
     txId: tx.transactionId.toString(),
     hcsSeq: hcsMeta.sequence,

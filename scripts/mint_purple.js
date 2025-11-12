@@ -13,6 +13,9 @@
  * during reasoning operations (Layer 2: TOKENMINT in the three-layer architecture).
  */
 
+import { config } from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   Client,
   PrivateKey,
@@ -21,8 +24,13 @@ import {
   TokenSupplyType,
   ContractId,
 } from "@hashgraph/sdk";
-import { getOperatorConfig, DEPLOYED_CONTRACT_ADDRESS } from "./lib/config.js";
 import * as logger from "./lib/logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env.example
+config({ path: path.join(__dirname, "..", ".env.example") });
 
 /**
  * Create the $PURPLE token with contract as supply key
@@ -31,15 +39,15 @@ import * as logger from "./lib/logger.js";
  * @throws {Error} If token creation fails
  */
 async function createPurpleToken(contractAddress) {
-  const operatorConfig = getOperatorConfig();
-  const operatorKey = PrivateKey.fromString(operatorConfig.derKey);
-  const client = Client.forTestnet().setOperator(operatorConfig.id, operatorKey);
+  const operatorId = process.env.OPERATOR_ID;
+  const operatorKey = PrivateKey.fromStringDer(process.env.OPERATOR_DER_KEY);
+  const client = Client.forTestnet().setOperator(operatorId, operatorKey);
 
   // Define metadata with RGB hex color for self-describing proofs
   const metadata = { name: "Purple", symbol: "PURPLE", color: "#800080" };
 
   logger.info("Creating $PURPLE token with contract supply key...", {
-    treasury: operatorConfig.id,
+    treasury: operatorId,
     supplyKey: contractAddress,
     initialSupply: 0,
     metadata,
@@ -55,7 +63,7 @@ async function createPurpleToken(contractAddress) {
     .setTokenType(TokenType.FungibleCommon)
     .setDecimals(0)
     .setInitialSupply(0) // Contract mints on demand
-    .setTreasuryAccountId(operatorConfig.id)
+    .setTreasuryAccountId(operatorId)
     .setSupplyType(TokenSupplyType.Infinite)
     .setSupplyKey(contractId) // Contract can mint
     .freezeWith(client)
@@ -91,8 +99,12 @@ async function main() {
   try {
     logger.section("Mint $PURPLE Token");
 
-    const contractAddress = DEPLOYED_CONTRACT_ADDRESS;
-    logger.info("Using contract address from CLAUDE.md", { contractAddress });
+    const contractAddress = process.env.CONTRACT_ADDR;
+    if (!contractAddress) {
+      logger.error("CONTRACT_ADDR not found in .env.example");
+      process.exit(1);
+    }
+    logger.info("Using contract address from .env.example", { contractAddress });
 
     const result = await createPurpleToken(contractAddress);
 
