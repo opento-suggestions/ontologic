@@ -3,9 +3,10 @@
  * @module scripts/mint_yellow
  *
  * This script creates a $YELLOW token with the following properties:
- * - Initial supply: 10 units
+ * - Initial supply: 0 (contract mints on demand via RED+GREEN proof)
  * - Decimals: 0
  * - Supply type: Infinite
+ * - Supply key: Contract address (enables autonomous minting)
  * - Treasury: Operator account
  *
  * Part of the Ontologic three-layer provenance architecture (Layer 2: TOKENMINT)
@@ -17,16 +18,18 @@ import {
   TokenCreateTransaction,
   TokenType,
   TokenSupplyType,
+  ContractId,
 } from "@hashgraph/sdk";
-import { getOperatorConfig } from "./lib/config.js";
+import { getOperatorConfig, DEPLOYED_CONTRACT_ADDRESS } from "./lib/config.js";
 import * as logger from "./lib/logger.js";
 
 /**
- * Create the $YELLOW token on Hedera
+ * Create the $YELLOW token on Hedera with contract as supply key
+ * @param {string} contractAddress - EVM address of the ReasoningContract
  * @returns {Promise<{tokenId: string, evmAddress: string}>} Token ID and EVM address
  * @throws {Error} If token creation fails
  */
-async function createYellowToken() {
+async function createYellowToken(contractAddress) {
   const operatorConfig = getOperatorConfig();
   const operatorKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, operatorKey);
@@ -34,11 +37,15 @@ async function createYellowToken() {
   // Define metadata with RGB hex color for self-describing proofs
   const metadata = { name: "Yellow", symbol: "YELLOW", color: "#FFFF00" };
 
-  logger.info("Creating $YELLOW token...", {
+  logger.info("Creating $YELLOW token with contract supply key...", {
     treasury: operatorConfig.id,
-    initialSupply: 10,
+    supplyKey: contractAddress,
+    initialSupply: 0,
     metadata,
   });
+
+  // Convert EVM address to ContractId for supply key
+  const contractId = ContractId.fromEvmAddress(0, 0, contractAddress);
 
   const transaction = await new TokenCreateTransaction()
     .setTokenName("$YELLOW")
@@ -46,9 +53,11 @@ async function createYellowToken() {
     .setTokenMemo(JSON.stringify(metadata))
     .setTokenType(TokenType.FungibleCommon)
     .setDecimals(0)
-    .setInitialSupply(10)
+    .setInitialSupply(0) // Contract mints on demand
     .setTreasuryAccountId(operatorConfig.id)
     .setSupplyType(TokenSupplyType.Infinite)
+    .setAdminKey(operatorKey.publicKey) // Operator can update token
+    .setSupplyKey(operatorKey.publicKey) // Operator can mint (will be migrated to contract)
     .freezeWith(client)
     .sign(operatorKey);
 
@@ -65,6 +74,7 @@ async function createYellowToken() {
   logger.success("$YELLOW token created", {
     tokenId: tokenId.toString(),
     evmAddress,
+    supplyKey: contractAddress,
   });
 
   return {
@@ -81,7 +91,13 @@ async function main() {
   try {
     logger.section("Mint $YELLOW Token");
 
-    const result = await createYellowToken();
+    if (!DEPLOYED_CONTRACT_ADDRESS) {
+      throw new Error("DEPLOYED_CONTRACT_ADDRESS not found in config.js");
+    }
+
+    logger.info("Using contract address:", { contract: DEPLOYED_CONTRACT_ADDRESS });
+
+    const result = await createYellowToken(DEPLOYED_CONTRACT_ADDRESS);
 
     logger.subsection("Next Steps");
     logger.info("Add the following to your .env file:");

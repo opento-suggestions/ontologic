@@ -11,8 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from project root
-// Use .env.example for example wallet operations
-dotenv.config({ path: path.join(__dirname, "..", "..", ".env.example"), override: true });
+// Now uses .env (copy of .env.example) for standard dotenv compatibility
+dotenv.config({ path: path.join(__dirname, "..", "..", ".env"), override: true });
 
 /**
  * Validates that required environment variables are present

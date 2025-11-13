@@ -24,7 +24,8 @@ hs_err_pid*
 replay_pid*
 
 # Environment credentials
-*.env 
+*.env
+.env.DO_NOT_USE
 
 printf "%s\n" \
 "node_modules/" \

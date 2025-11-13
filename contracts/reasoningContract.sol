@@ -19,7 +19,7 @@ pragma solidity ^0.8.20;
  * - Subtractive math: LIGHT (channelwise RGB), PAINT (CMY model)
  * - Triple-equality: hash_local == hash_event == hash_hcs
  * - Canonical proof caching: One proof per (domain, operator, inputs)
- * - 9-token configuration: RGB+CMY+WHITE+GREY+PURPLE
+ * - 9-token configuration: RGB+CMY+WHITE+BLACK+PURPLE
  */
 
 /**
@@ -106,9 +106,9 @@ contract ReasoningContract {
     /// @dev Configurable post-deployment, initialized to zero
     address public WHITE_TOKEN_ADDR;
 
-    /// @notice EVM address for $GREY token (derived output)
+    /// @notice EVM address for $BLACK token (CMYK 'K' component)
     /// @dev Configurable post-deployment, initialized to zero
-    address public GREY_TOKEN_ADDR;
+    address public BLACK_TOKEN_ADDR;
 
     /// @notice EVM address for $PURPLE token (derived output)
     /// @dev Configurable post-deployment, initialized to zero
@@ -275,7 +275,7 @@ contract ReasoningContract {
      * @param cyan EVM address for CYAN token
      * @param magenta EVM address for MAGENTA token
      * @param white EVM address for WHITE token
-     * @param grey EVM address for GREY token
+     * @param black EVM address for BLACK token
      * @param purple EVM address for PURPLE token
      */
     event TokenAddressesUpdated(
@@ -286,7 +286,7 @@ contract ReasoningContract {
         address cyan,
         address magenta,
         address white,
-        address grey,
+        address black,
         address purple
     );
 
@@ -337,7 +337,7 @@ contract ReasoningContract {
      * @param _cyan EVM address for CYAN token
      * @param _magenta EVM address for MAGENTA token
      * @param _white EVM address for WHITE token
-     * @param _grey EVM address for GREY token
+     * @param _black EVM address for BLACK token
      * @param _purple EVM address for PURPLE token
      */
     function setTokenAddresses(
@@ -348,13 +348,13 @@ contract ReasoningContract {
         address _cyan,
         address _magenta,
         address _white,
-        address _grey,
+        address _black,
         address _purple
     ) external onlyOwner {
         require(
             _red != address(0) && _green != address(0) && _blue != address(0) &&
             _yellow != address(0) && _cyan != address(0) && _magenta != address(0) &&
-            _white != address(0) && _grey != address(0) && _purple != address(0),
+            _white != address(0) && _black != address(0) && _purple != address(0),
             "zero addr"
         );
 
@@ -365,10 +365,10 @@ contract ReasoningContract {
         CYAN_TOKEN_ADDR = _cyan;
         MAGENTA_TOKEN_ADDR = _magenta;
         WHITE_TOKEN_ADDR = _white;
-        GREY_TOKEN_ADDR = _grey;
+        BLACK_TOKEN_ADDR = _black;
         PURPLE_TOKEN_ADDR = _purple;
 
-        emit TokenAddressesUpdated(_red, _green, _blue, _yellow, _cyan, _magenta, _white, _grey, _purple);
+        emit TokenAddressesUpdated(_red, _green, _blue, _yellow, _cyan, _magenta, _white, _black, _purple);
     }
 
     /**

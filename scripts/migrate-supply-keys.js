@@ -5,8 +5,12 @@
  * Usage: node scripts/migrate-supply-keys.js
  *
  * Performs two operations:
- * 1. Updates CMY+derived tokens to use ReasoningContract as supply key
- * 2. Calls setTokenAddresses() with all 9 tokens (RGB+CMY+WHITE+GREY+PURPLE)
+ * 1. Updates proof-output tokens (CMY + WHITE + BLACK + PURPLE) to use ReasoningContract as supply key
+ * 2. Calls setTokenAddresses() with all 9 tokens (RGB+CMY+WHITE+BLACK+PURPLE)
+ *
+ * Architecture Principle:
+ * - Primitives (RGB only): Treasury-controlled, axiomatic inputs, contract reads only
+ * - Proof Outputs (CMY + WHITE + BLACK + PURPLE): Contract-minted, reasoning consequences
  */
 
 import { config } from "dotenv";
@@ -27,13 +31,21 @@ const __dirname = path.dirname(__filename);
 // Load .env.example
 config({ path: path.join(__dirname, "..", ".env.example") });
 
-// Tokens that need supply key migration (CMY + derived outputs)
+// Tokens that need supply key migration (proof outputs: CMY + WHITE + BLACK + PURPLE)
+// Contract mints these as consequences of valid reasoning operations
 const TOKENS_TO_UPDATE = [
   { symbol: "YELLOW", id: process.env.YELLOW_TOKEN_ID, evmAddr: process.env.YELLOW_ADDR },
   { symbol: "CYAN", id: process.env.CYAN_TOKEN_ID, evmAddr: process.env.CYAN_ADDR },
   { symbol: "MAGENTA", id: process.env.MAGENTA_TOKEN_ID, evmAddr: process.env.MAGENTA_ADDR },
-  // Note: WHITE, GREY, PURPLE already have contract as supply key from creation
+  { symbol: "WHITE", id: process.env.WHITE_TOKEN_ID, evmAddr: process.env.WHITE_ADDR },
+  { symbol: "BLACK", id: process.env.BLACK_TOKEN_ID, evmAddr: process.env.BLACK_ADDR },
+  { symbol: "PURPLE", id: process.env.PURPLE_TOKEN_ID, evmAddr: process.env.PURPLE_ADDR },
 ];
+
+// Primitive tokens (RGB only) remain treasury-controlled
+// These are axiomatic inputs, not proof products
+// Contract reads them but never mints them
+const PRIMITIVE_TOKENS = ["RED", "GREEN", "BLUE"];
 
 // All 9 tokens for contract configuration (order matters!)
 const ALL_TOKENS = [
@@ -44,7 +56,7 @@ const ALL_TOKENS = [
   { symbol: "CYAN", evmAddr: process.env.CYAN_ADDR },
   { symbol: "MAGENTA", evmAddr: process.env.MAGENTA_ADDR },
   { symbol: "WHITE", evmAddr: process.env.WHITE_ADDR },
-  { symbol: "GREY", evmAddr: process.env.GREY_ADDR },
+  { symbol: "BLACK", evmAddr: process.env.BLACK_ADDR },
   { symbol: "PURPLE", evmAddr: process.env.PURPLE_ADDR },
 ];
 
@@ -74,10 +86,11 @@ async function main() {
     ok: true,
     contract: contractAddr,
     contractId: contractIdStr,
-    tokensToUpdate: TOKENS_TO_UPDATE.map(t => ({ symbol: t.symbol, id: t.id }))
+    tokensToUpdate: TOKENS_TO_UPDATE.map(t => ({ symbol: t.symbol, id: t.id })),
+    note: "Migrating proof-output tokens (CMY + WHITE + BLACK + PURPLE) - RGB primitives remain treasury-controlled"
   }));
 
-  // Step 1: Migrate supply keys for CMY tokens
+  // Step 1: Migrate supply keys for proof-output tokens (CMY + WHITE + BLACK + PURPLE)
   for (const token of TOKENS_TO_UPDATE) {
     if (!token.id) {
       console.error(JSON.stringify({
@@ -133,7 +146,7 @@ async function main() {
     stage: "configure-contract",
     ok: true,
     action: "submitting",
-    message: "Updating contract with 9 token addresses (RGB+CMY+WHITE+GREY+PURPLE)"
+    message: "Updating contract with 9 token addresses (RGB+CMY+WHITE+BLACK+PURPLE)"
   }));
 
   try {
@@ -163,7 +176,7 @@ async function main() {
           .addAddress(ALL_TOKENS[4].evmAddr)  // CYAN
           .addAddress(ALL_TOKENS[5].evmAddr)  // MAGENTA
           .addAddress(ALL_TOKENS[6].evmAddr)  // WHITE
-          .addAddress(ALL_TOKENS[7].evmAddr)  // GREY
+          .addAddress(ALL_TOKENS[7].evmAddr)  // BLACK
           .addAddress(ALL_TOKENS[8].evmAddr)  // PURPLE
       )
       .execute(client);
@@ -183,7 +196,7 @@ async function main() {
         cyan: ALL_TOKENS[4].evmAddr,
         magenta: ALL_TOKENS[5].evmAddr,
         white: ALL_TOKENS[6].evmAddr,
-        grey: ALL_TOKENS[7].evmAddr,
+        black: ALL_TOKENS[7].evmAddr,
         purple: ALL_TOKENS[8].evmAddr
       }
     }));
