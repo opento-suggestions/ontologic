@@ -28,8 +28,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env.example
-config({ path: path.join(__dirname, "..", ".env.example") });
+// Load .env (canonical configuration)
+config({ path: path.join(__dirname, "..", ".env") });
 
 // Tokens that need supply key migration (proof outputs: CMY + WHITE + BLACK + PURPLE)
 // Contract mints these as consequences of valid reasoning operations

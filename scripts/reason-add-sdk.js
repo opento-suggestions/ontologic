@@ -29,7 +29,12 @@ let TOKS = {};
 try { TOKS = JSON.parse(readFileSync("./scripts/lib/tokens.json","utf8")); }
 catch { console.error("missing ./scripts/lib/tokens.json"); process.exit(1); }
 
-function addrOf(sym){ if(sym.startsWith("0x")) return sym; const a=TOKS[sym]; if(!a) throw new Error(`unknown token: ${sym}`); return a; }
+function addrOf(sym){
+  if(sym.startsWith("0x")) return ethers.getAddress(sym); // Checksum provided address
+  const a=TOKS[sym];
+  if(!a) throw new Error(`unknown token: ${sym}`);
+  return ethers.getAddress(a); // Checksum address from tokens.json
+}
 
 const cfg = await getConfig();
 
@@ -117,6 +122,24 @@ const params = new ContractFunctionParameters()
   .addBytes32(Buffer.from(factHash.replace("0x", ""), "hex"))
   .addBytes32(Buffer.from(ruleHash.replace("0x", ""), "hex"))
   .addString(canonicalUri);
+
+// DEBUG: Print all computed values before contract call
+console.log("\n=== DEBUG: Parameters Being Sent to Contract ===");
+console.log("Token A (original):", A);
+console.log("Token B (original):", B);
+console.log("Token A (sorted X):", X);
+console.log("Token B (sorted Y):", Y);
+console.log("Output Token:", OUT);
+console.log("D_LIGHT:", D_LIGHT);
+console.log("OP_ADD:", OP_ADD);
+console.log("inputsPreimage:", inputsPreimage);
+console.log("inputsHash:", inputsHash);
+console.log("proofHash (kCanon):", kCanon);
+console.log("factHash:", factHash);
+console.log("ruleHash:", ruleHash);
+console.log("canonicalUri:", canonicalUri);
+console.log("Contract ID:", contractId.toString());
+console.log("=== END DEBUG ===\n");
 
 // Execute contract via SDK
 let receipt;

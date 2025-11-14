@@ -10,7 +10,14 @@ pragma solidity ^0.8.20;
  *      Layer 2: TOKENMINT - Mints output tokens via HTS as material consequence
  *      Layer 3: HCS MESSAGE - External proof submission to consensus topic (handled by client)
  *
- * Alpha v0.4.5 Implementation (Extended Token Support):
+ * Ontologic ReasoningContract — v0.5.0
+ * Hedera-native upgrade: ERC-20 balanceOf checks disabled for HTS compatibility.
+ *
+ * v0.5.0 Changes:
+ * - Disabled ERC-20 balanceOf() guards (commented out, not deleted)
+ * - TODO v0.6: Replace with HTS precompile balance queries at 0x167
+ *
+ * v0.4.5 Base Implementation (Extended Token Support):
  * - ProofAdd (Peirce): Additive reasoning with token minting
  * - ProofCheck (Tarski): Subtractive reasoning with boolean verdict
  * - ProofEntity (Floridi): Entity manifest publication with projections
@@ -199,6 +206,28 @@ contract ReasoningContract {
         address[] inputs,
         address outputToken,
         uint64 ratio
+    );
+
+    /**
+     * @notice DEBUG: Emitted to trace token pair matching in _mixAddDeterministic
+     * @param inputA Original input token A
+     * @param inputB Original input token B
+     * @param sortedX Sorted token X (min)
+     * @param sortedY Sorted token Y (max)
+     * @param expectedRed Contract's RED_TOKEN_ADDR
+     * @param expectedGreen Contract's GREEN_TOKEN_ADDR
+     * @param matchX Whether X matches expected RED
+     * @param matchY Whether Y matches expected GREEN
+     */
+    event DebugPair(
+        address inputA,
+        address inputB,
+        address sortedX,
+        address sortedY,
+        address expectedRed,
+        address expectedGreen,
+        bool matchX,
+        bool matchY
     );
 
     /**
@@ -445,13 +474,15 @@ contract ReasoningContract {
         Rule storage r = rules[ruleId];
         require(r.active, "rule off");
 
+        // v0.5.0: Disabled ERC-20 balanceOf check (HTS tokens don't implement balanceOf from contracts)
+        // TODO v0.6: Replace with HTS precompile balance query at 0x167
         // Validate caller has sufficient input token balances
-        for (uint256 i = 0; i < r.inputs.length; i++) {
-            IERC20 token = IERC20(r.inputs[i]);
-            uint8 decimals = _safeDecimals(r.inputs[i]);
-            uint256 requiredAtoms = uint256(inputUnits) * (10 ** decimals);
-            require(token.balanceOf(msg.sender) >= requiredAtoms, "insufficient input");
-        }
+        // for (uint256 i = 0; i < r.inputs.length; i++) {
+        //     IERC20 token = IERC20(r.inputs[i]);
+        //     uint8 decimals = _safeDecimals(r.inputs[i]);
+        //     uint256 requiredAtoms = uint256(inputUnits) * (10 ** decimals);
+        //     require(token.balanceOf(msg.sender) >= requiredAtoms, "insufficient input");
+        // }
 
         // Calculate mint amount and call HTS precompile
         minted = inputUnits * r.ratioNumerator;
@@ -495,13 +526,15 @@ contract ReasoningContract {
         // Fresh proof: use deterministic RGB→CMY mapping
         (outToken, amount) = _mixAddDeterministic(A, B);
 
+        // v0.5.0: Disabled ERC-20 balanceOf checks (HTS tokens don't implement balanceOf from contracts)
+        // TODO v0.6: Replace with HTS precompile balance query at 0x167
         // Validate caller has sufficient input token balances
-        IERC20 tokenA = IERC20(A);
-        IERC20 tokenB = IERC20(B);
-        uint8 decimalsA = _safeDecimals(A);
-        uint8 decimalsB = _safeDecimals(B);
-        require(tokenA.balanceOf(msg.sender) >= 10 ** decimalsA, "insufficient A");
-        require(tokenB.balanceOf(msg.sender) >= 10 ** decimalsB, "insufficient B");
+        // IERC20 tokenA = IERC20(A);
+        // IERC20 tokenB = IERC20(B);
+        // uint8 decimalsA = _safeDecimals(A);
+        // uint8 decimalsB = _safeDecimals(B);
+        // require(tokenA.balanceOf(msg.sender) >= 10 ** decimalsA, "insufficient A");
+        // require(tokenB.balanceOf(msg.sender) >= 10 ** decimalsB, "insufficient B");
 
         // Mint output token via HTS precompile
         (int64 responseCode,,) = HTS.mintToken(outToken, amount, new bytes[](0));
@@ -526,11 +559,19 @@ contract ReasoningContract {
      */
     function _mixAddDeterministic(address A, address B)
         internal
-        view
         returns (address outToken, uint64 amount)
     {
         // Sort inputs for order-invariance
         (address X, address Y) = A < B ? (A, B) : (B, A);
+
+        // DEBUG: Emit comparison details before checking pairs
+        emit DebugPair(
+            A, B,
+            X, Y,
+            RED_TOKEN_ADDR, GREEN_TOKEN_ADDR,
+            X == RED_TOKEN_ADDR,
+            Y == GREEN_TOKEN_ADDR
+        );
 
         // Map RGB primaries to CMY secondaries
         if (X == RED_TOKEN_ADDR && Y == GREEN_TOKEN_ADDR) {
@@ -674,6 +715,39 @@ contract ReasoningContract {
         returns (bytes32)
     {
         return keccak256(abi.encode(A, B, C, domainHash, OP_SUB));
+    }
+
+    /**
+     * @notice Debug helper to validate parameters before execution
+     * @dev Returns contract-computed values and match status for off-chain validation
+     * @param A First input token
+     * @param B Second input token
+     * @param domainHash Domain hash from client
+     * @param inputsHash Inputs hash from client
+     * @return expectedDomain Contract's D_LIGHT constant
+     * @return expectedInputs Contract-computed inputsHash
+     * @return domainMatch True if domainHash matches D_LIGHT
+     * @return inputMatch True if inputsHash matches contract computation
+     */
+    function debugValidation(
+        address A,
+        address B,
+        bytes32 domainHash,
+        bytes32 inputsHash
+    )
+        external
+        view
+        returns (
+            bytes32 expectedDomain,
+            bytes32 expectedInputs,
+            bool domainMatch,
+            bool inputMatch
+        )
+    {
+        expectedDomain = D_LIGHT;
+        expectedInputs = _inputsHashAdd(A, B, domainHash);
+        domainMatch = (domainHash == D_LIGHT);
+        inputMatch = (inputsHash == expectedInputs);
     }
 
     /**

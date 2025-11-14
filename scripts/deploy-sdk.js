@@ -21,8 +21,8 @@ import * as logger from "./lib/logger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env.example
-config({ path: path.join(__dirname, "..", ".env.example") });
+// Load .env (canonical configuration)
+config({ path: path.join(__dirname, "..", ".env") });
 
 /**
  * Deploy ReasoningContract using Hedera SDK
@@ -81,15 +81,18 @@ async function main() {
     [schemaHash]
   );
 
-  // Deploy via SDK
-  logger.info("Deploying contract via SDK...");
+  // Deploy via SDK with admin key = operator
+  logger.info("Deploying contract via SDK with admin key...");
 
   try {
+    const operatorPrivateKey = PrivateKey.fromStringDer(operatorKey);
+
     const contractCreateTx = new ContractCreateFlow()
       .setBytecode(bytecode)
       .setConstructorParameters(constructorParams)
       .setGas(5000000) // 5M gas for deployment
-      .setMaxChunks(30); // Handle large bytecode
+      .setMaxChunks(30) // Handle large bytecode
+      .setAdminKey(operatorPrivateKey.publicKey); // Enable Hedera-native upgrades
 
     const txResponse = await contractCreateTx.execute(client);
     const receipt = await txResponse.getReceipt(client);
