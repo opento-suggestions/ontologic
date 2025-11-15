@@ -1,9 +1,18 @@
 # Ontologic v0.6.3 - Canonical Demo Snapshot
 
+🔒 **FROZEN** - Hackathon Demo Reference (2025-11-15)
+
 **Date**: 2025-11-15
 **Contract ID**: 0.0.7261322
 **Network**: Hedera Testnet
 **Status**: ✅ Fully Operational - Triune Architecture Complete
+**Proof Bundles**: `examples/mvp/final/`
+
+---
+
+> **NOTE**: This document is frozen as the canonical reference for the hackathon demo.
+> All transaction IDs, proof hashes, and HCS URIs in this file are from verified
+> executions on 2025-11-15 and match the video/slides exactly.
 
 ---
 
