@@ -1,0 +1,21 @@
+{
+  "v": "0.5.2",
+  "layer": "peirce",
+  "mode": "additive",
+  "domain": "color.light",
+  "operator": "mix_add@v1",
+  "inputs": [
+    { "symbol": "RED", "token": "0x00000000000000000000000000000000006e9742" },
+    { "symbol": "GREEN", "token": "0x00000000000000000000000000000000006e9743" }
+  ],
+  "output": {
+    "symbol": "YELLOW",
+    "token": "0x00000000000000000000000000000000006e9799",
+    "amount": "1"
+  },
+  "rule": {
+    "contract": "0x6f46212a06e6bca5e3f74f4a2acafc70ca9db7fd",
+    "version": "v0.5.2"
+  },
+  "description": "Red light + Green light = Yellow light (additive color mixing)"
+}

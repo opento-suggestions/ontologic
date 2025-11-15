@@ -1,169 +1,194 @@
-# Ontologic â€” Proof-of-Reasoning on Hedera
+# Ontologic v0.6.3  The Glass Box Protocol
 
-A proof-of-reasoning toolkit for Hedera using the Hiero SDK. Implements a three-layer provenance architecture where logical operations on input tokens (RED + BLUE) produce output tokens (PURPLE) with verifiable on-chain proofs.
+**Triune Proof-of-Reasoning on Hedera (HTS + HCS + Smart Contracts)**
 
-**Status**: Alpha v0.2 deployed and operational on Hedera testnet
+< **Website**: [https://ontologic-uv6.caffeine.xyz/](https://ontologic-uv6.caffeine.xyz/)
 
-## Current Deployment (Testnet)
+---
 
-**Contract**: `0xC739f496E8dbc146a54fDBF47080AE557FF8Ea27`
-**Schema Hash**: `0xf1944d69e7680639ebde87ed129a18522cdf8415d254b9a12d638df5e1ddd934`
-**HCS Topic**: `0.0.7204585`
+## P What Ontologic Is
 
-**Tokens (with RGB Metadata)**:
-- **$RED**: `0.0.7204552` (EVM: `0x006deec8`) - Metadata: `#FF0000`
-- **$BLUE**: `0.0.7204565` (EVM: `0x006deed5`) - Metadata: `#0000FF`
-- **$PURPLE**: `0.0.7204602` (EVM: `0x006deefa`) - Metadata: `#800080`
+Ontologic turns AI/agentic reasoning from a **black box** into a **glass box** by producing verifiable, on-chain proofs of *why* a system made a decision.
 
-**Active Rule**: `0xf2f46b98fc2fc538ecffaca7cdc83e722b23beeba55aa086b5c916a49ef943bd`
+Each proof compresses:
 
-**Example Transaction**: [View on HashScan](https://hashscan.io/testnet/transaction/0x02c151b7ec3c11209299875f284f3d33fa6ba8d25fef1b7f089da5b0b9e0292e)
+1. **Logic** (Peirce)
+2. **Material consequence** (Tarski)
+3. **Meaning / attestation** (Floridi)
 
-## Three-Layer Provenance Architecture
+into a **single cryptographic artifact** called a **morpheme**.
 
-1. **Layer 1: CONTRACTCALL** - Smart contract validates input tokens and enforces reasoning rules
-2. **Layer 2: TOKENMINT** - HTS precompile mints output token as material proof of valid reasoning
-3. **Layer 3: HCS MESSAGE** - Canonical proof JSON submitted to consensus topic for append-only provenance
+This morpheme is independently verifiable across:
 
-**Complete provenance chain**: Logical Inference â†’ Material Consequence â†’ Public Consensus Record
+* A Hedera **smart contract** (ReasoningContract v0.6.3)
+* A Hedera **token state change** (HTS mint)
+* A Hedera **consensus record** (HCS manifest)
 
-## Quick Start
+This repo demonstrates the entire flow end-to-end.
 
-### Prerequisites
+---
+
+## <Û Live On-Testnet
+
+**Contract:** `0.0.7261322`
+[https://hashscan.io/testnet/contract/0.0.7261322](https://hashscan.io/testnet/contract/0.0.7261322)
+
+**HCS Topic:** `0.0.7239064`
+[https://hashscan.io/testnet/topic/0.0.7239064](https://hashscan.io/testnet/topic/0.0.7239064)
+
+**Version:** `v0.6.3` (Frozen)
+All canonical artifacts: [`CANONICAL_ARTIFACTS.md`](CANONICAL_ARTIFACTS.md)
+
+---
+
+## <¨ Token System (HTS)
+
+### RGB (axioms)
+
+* RED  `0.0.7247682`
+* GREEN  `0.0.7247683`
+* BLUE  `0.0.7247684`
+
+### CMY (reasoned results)
+
+* YELLOW  `0.0.7247769`
+* CYAN  `0.0.7247778`
+* MAGENTA  `0.0.7247782`
+
+### Entity Verdict
+
+* WHITE  `0.0.7261514`
+
+---
+
+## =' Installation
 
 ```bash
 npm install
+cp .env.example .env
 ```
 
-### Environment Setup
+Set your operator account + private key in `.env`.
 
-Create a `.env` file in the project root:
+---
 
-```env
-# Operator Account
-OPERATOR_ID=0.0.xxxxxx
-OPERATOR_DER_KEY=302e...
-OPERATOR_HEX_KEY=0x...
-OPERATOR_EVM_ADDR=0x...
+## =€ Run the Demo Proofs
 
-# Network
-HEDERA_RPC_URL=https://testnet.hashio.io/api
-MIRROR_NODE_URL=https://testnet.mirrornode.hedera.com/api/v1
+Ontologic includes frozen example bundles in:
 
-# Tokens (created during setup)
-RED_TOKEN_ID=0.0.xxxxxx
-BLUE_TOKEN_ID=0.0.xxxxxx
-PURPLE_TOKEN_ID=0.0.xxxxxx
-RED_ADDR=0x...
-BLUE_ADDR=0x...
-PURPLE_ADDR=0x...
-
-# HCS Topic (created during setup)
-HCS_TOPIC_ID=0.0.xxxxxx
+```
+examples/mvp/final/
 ```
 
-### Deployment Steps
+### 1. Run additive (Peirce/Tarski) proofs
 
 ```bash
-# 1. Build contracts
-npx hardhat compile
-
-# 2. Deploy ReasoningContract
-node scripts/deploy.js
-
-# 3. Create tokens with RGB metadata
-node scripts/mint_red.js
-node scripts/mint_blue.js
-node scripts/mint_purple.js
-
-# 4. Create HCS topic
-node scripts/create_topic.js
-
-# 5. Configure reasoning rule
-node scripts/set_rule.js
-
-# 6. Execute proof-of-reasoning
-node scripts/reason.js
+node scripts/reason.js examples/mvp/final/red-green-yellow.json
+node scripts/reason.js examples/mvp/final/green-blue-cyan.json
+node scripts/reason.js examples/mvp/final/red-blue-magenta.json
 ```
 
-### Execute Reasoning (After Setup)
+Each proof:
+
+* Executes `reasonAdd()` on contract `0.0.7261322`
+* Mints the correct CMY token (HTS)
+* Publishes manifest to HCS topic `0.0.7239064`
+* Produces a morpheme (`proofHash`)
+
+### 2. Run entity attestation (Floridi)
 
 ```bash
-node scripts/reason.js
+node scripts/entity-v06.js examples/mvp/final/entity-white-light.json
 ```
 
-**Output**:
-- Transaction hash (CONTRACTCALL + TOKENMINT)
-- Canonical proof JSON with RGB color metadata
-- HCS submission confirmation
-- Verification links (HashScan & Mirror Node)
+This verifies:
 
-## Key Features
+* 3 CMY proofs exist
+* Evidence hashes match
+* WHITE is attested in LIGHT domain
+* Manifest is anchored in HCS
 
-- **Self-Describing Proofs**: All tokens include RGB hex color metadata in their on-chain memos
-- **Three-Layer Validation**: Complete provenance from logical validation through material consequence to consensus record
-- **Autonomous Minting**: Contract holds supply key for output token, enabling trustless token creation
-- **Canonical Proofs**: keccak256-hashed JSON proofs submitted to HCS for immutable record
-- **Hedera-Native**: Built on HTS precompile (0x167) and HCS for network-native operations
+### 3. Validate entire system
 
-## Architecture
-
-**Smart Contract**: `contracts/reasoningContract.sol`
-- Rule-based reasoning system
-- HTS integration for token minting
-- Event emission for proof verification
-
-**Scripts**:
-- `deploy.js` - Deploy ReasoningContract
-- `mint_*.js` - Create tokens with metadata
-- `create_topic.js` - Set up HCS topic
-- `set_rule.js` - Configure reasoning rules
-- `reason.js` - Execute proof-of-reasoning operations
-
-**Utilities** (`scripts/lib/`):
-- `config.js` - Environment and configuration management
-- `logger.js` - Structured logging
-- `proof.js` - Canonical proof generation
-
-## Canonical Proof Format
-
-```json
-{
-  "v": "0",
-  "domain": "color",
-  "subdomain": "paint",
-  "operator": "mix_paint",
-  "inputs": [
-    {"token": "0.0.7204552", "alias": "red", "hex": "#FF0000"},
-    {"token": "0.0.7204565", "alias": "blue", "hex": "#0000FF"}
-  ],
-  "output": {"token": "0.0.7204602", "alias": "purple", "hex": "#800080"},
-  "ts": "2025-11-06T21:11:53.327Z"
-}
+```bash
+node scripts/validate-light-e2e-v063.js
 ```
 
-## Documentation
+---
 
-- Detailed architecture overview
-- Environment configuration
-- Development workflows
-- Hedera-specific considerations
-- Future enhancements (HIP-1195 hooks)
+## = Morpheme: The Proof Compression Unit
 
-## Verification
+Ontologic compresses:
 
-**Contract**: [View on HashScan](https://hashscan.io/testnet/contract/0xC739f496E8dbc146a54fDBF47080AE557FF8Ea27)
+* `ruleHash` (semantic rule identity)
+* `inputsHash` (materials)
+* `factHash` (result)
+* `canonicalUri` (HCS manifest)
 
-**HCS Topic**: [View Messages](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.7204585/messages)
+into:
 
-**Example Reasoning Operation**: [View Transaction](https://hashscan.io/testnet/transaction/0x02c151b7ec3c11209299875f284f3d33fa6ba8d25fef1b7f089da5b0b9e0292e)
+```
+proofHash = keccak256(...)
+```
 
-## License
+This is the "TCP/IP for reasoning provenance" moment 
+a **single hash** representing a **complete, verifiable thought**.
 
-See [LICENSE](LICENSE) for details.
+---
 
-## Links
+## =æ Canonical "Bytes Used in Demo"
 
-- [Hedera Documentation](https://docs.hedera.com)
-- [Hiero JSON-RPC](https://docs.hedera.com/hedera/smart-contracts/json-rpc)
-- [Hedera Agent Kit](https://github.com/hashgraph/hedera-agent-kit)
+All demo proofs (HCS sequences 3942) + hashes:
+See: [`DEMO_SNAPSHOT_V063.md`](DEMO_SNAPSHOT_V063.md)
+
+---
+
+## = v0.6.3 Architecture
+
+Full explanation of:
+
+* Peirce ’ Tarski ’ Floridi layers
+* How morphemes work
+* Contract internals
+* Token flow
+* Consensus anchoring
+
+See: [`docs/architecture.md`](docs/architecture.md)
+
+---
+
+## =Ã Project Structure
+
+```
+contracts/                 ReasoningContract v0.6.3
+scripts/                   Proof executors + entity logic
+examples/mvp/final/        Frozen bundles used in demo
+docs/                      Architecture + judge card
+archive/                   All legacy material
+```
+
+---
+
+## >í Roadmap (Post-hackathon)
+
+* v0.7  Rule registry activation & proxy-pattern migration
+* v0.8  Multi-domain reasoning + subtractive "paint" model
+* v0.9  Secure element (SE) signatures for silicon-layer proofs
+* v1.0  Ontologic SDK & hsphere.execute() abstraction
+
+---
+
+## =Ü License
+
+Apache 2.0
+
+---
+
+## =O Acknowledgments
+
+Built for the Hedera Ascension Hackathon 2025. Copyright Ontologic, Open To Suggestions Media.
+Open-sourced. Apache 2.0 license. Because it is better to give than to receive.
+
+Uses HTS, HCS, Smart Contracts 2.0, and Hedera's low-latency consensus.
+
+Grateful to all of the assistance I received throughout this process, my wife Melanie, my parents, my sister, friends and family, as well as agentic and otherwise. I express gratitude.

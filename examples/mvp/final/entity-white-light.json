@@ -1,0 +1,60 @@
+{
+  "v": "0.6.0",
+  "nsid": "color.entity.WHITE.light@v1",
+  "layer": "floridi",
+  "mode": "entity",
+  "domain": "color.entity.light",
+  "operator": "attest_palette@v1",
+  "evidence": [
+    {
+      "proofHash": "0x536d578fe6704ea413ca3e51a66f220db2ceeeacc3c12e7d905acf24795417b2",
+      "canonicalUri": "hcs://0.0.7239064/1763179772.831308000",
+      "hcsSeq": "33",
+      "inputs": [
+        { "symbol": "RED", "token": "0x00000000000000000000000000000000006e9742" },
+        { "symbol": "GREEN", "token": "0x00000000000000000000000000000000006e9743" }
+      ],
+      "output": { "symbol": "YELLOW", "token": "0x00000000000000000000000000000000006e9799" }
+    },
+    {
+      "proofHash": "0xb61992a0c5d7114ff82af5fb2f4863b1099d431837cc83a013e9d090f00978bd",
+      "canonicalUri": "hcs://0.0.7239064/1763179810.548449000",
+      "hcsSeq": "34",
+      "inputs": [
+        { "symbol": "GREEN", "token": "0x00000000000000000000000000000000006e9743" },
+        { "symbol": "BLUE", "token": "0x00000000000000000000000000000000006e9744" }
+      ],
+      "output": { "symbol": "CYAN", "token": "0x00000000000000000000000000000000006e97a2" }
+    },
+    {
+      "proofHash": "0x33608b66fa5b9be56ca0939faea1f360741f07edb30dac81521582a61f4059ba",
+      "canonicalUri": "hcs://0.0.7239064/1763179820.102571032",
+      "hcsSeq": "35",
+      "inputs": [
+        { "symbol": "RED", "token": "0x00000000000000000000000000000000006e9742" },
+        { "symbol": "BLUE", "token": "0x00000000000000000000000000000000006e9744" }
+      ],
+      "output": { "symbol": "MAGENTA", "token": "0x00000000000000000000000000000000006e97a6" }
+    }
+  ],
+  "output": {
+    "token": "0x00000000000000000000000000000000006ecd4a",
+    "symbol": "WHITE",
+    "verdict": "0x00000000000000000000000000000000006ecd4a",
+    "amount": "1"
+  },
+  "description": "Entity attestation for WHITE (light domain). Evidence: Y+C+M proofs from additive color mixing.",
+  "rule": {
+    "contract": "0x6f46212a06e6bca5e3f74f4a2acafc70ca9db7fd",
+    "version": "v0.6.0"
+  },
+  "signers": [
+    "0x00000000000000000000000000000000006e73ab"
+  ],
+  "notes": {
+    "verdict_logic": "LIGHT domain checks: All 3 CMY proofs valid → YES → mint WHITE",
+    "rules_within_rules": "Domain 'color.entity.light' defines: YELLOW + CYAN + MAGENTA → WHITE is valid attestation",
+    "manifest_purpose": "Public record proving that WHITE token embodies complete additive light spectrum (RGB→CMY→WHITE)",
+    "floridi_layer": "This is the third and final layer - the entity-level manifest that attests to the completeness of the proof tree"
+  }
+}

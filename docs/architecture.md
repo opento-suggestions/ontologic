@@ -1,386 +1,400 @@
 # Ontologic Architecture
 
-**Version**: 1.0 (Post-Refactor)
-**Date**: 2025-11-06
+🔒 **FROZEN v0.6.3** - Hackathon Demo Reference (2025-11-15)
+
+**Version**: v0.6.3
+**Date**: 2025-11-15
+**Status**: ✅ Fully Operational - Triune Architecture Complete
+
+---
 
 ## Overview
 
-This document describes the refactored architecture of the Ontologic proof-of-reasoning toolkit. The refactor focused on clarity, maintainability, and consistency with modern TypeScript and Hedera Hiero SDK conventions while preserving all logical behaviors.
+Ontologic is a proof-of-reasoning toolkit for Hedera that implements a **three-layer provenance architecture** where logical operations on input tokens produce output tokens with verifiable on-chain proofs.
+
+**The Morpheme**: Logical inference + material consequence + public consensus = single cryptographic hash compressing all three layers.
+
+---
+
+## Key Innovations
+
+### v0.6.3 (Current - Hackathon Demo)
+- **Complete Triune Architecture**: Peirce (additive) + Tarski (subtractive) + Floridi (entity attestation)
+- **publishEntityV2**: Explicit evidence validation for entity proofs
+- **Rule Registry Infrastructure**: Built but deferred to v0.7.0+ (hardcoded execution remains authoritative)
+- **Glass Box Verification**: Deterministic rule application, verifiable on-chain
+
+### v0.6.0 (Floridi Layer)
+- **Entity Attestation**: publishEntity function with domain verdict logic
+- **Evidence-Based Validation**: Entity bundles consume multiple reasoning proofs
+- **ProofEntity Event**: Floridi layer tracking
+
+### v0.5.2 (Production Baseline)
+- **Idempotent Proofs**: Each proofHash executes exactly once, replays return cached outputs
+- **Order-Invariant Hashing**: Commutative operations (RED+GREEN == GREEN+RED) produce identical proofs
+- **Input Mutation Guards**: Preimage hash verification prevents replay attacks
+- **Configurable Token Addresses**: Post-deployment configuration breaks circular dependency
+
+### v0.4.2 (MVP)
+- **Dual-Layer Reasoning**: Peirce (additive minting) + Tarski (subtractive verification)
+- **SDK-Based Execution**: Required for Hedera ContractId supply keys
+- **HCS Integration**: Consensus-backed proof logging
+
+---
+
+## Current Deployment (Testnet - v0.6.3)
+
+**ReasoningContract:**
+- Contract ID: `0.0.7261322`
+- EVM Address: `0x00000000000000000000000000000000006ecc8a`
+- Owner: `0.0.7238571` (demo operator)
+- Version: v0.6.3
+- Code Hash: `0xd35199bebcddccd1e150e9140fcb1842295616dd249d63a0be6cc66ea75a48fd`
+
+**HCS Topic:**
+- Topic ID: `0.0.7239064`
+- Name: Ontologic Reasoning Proof Tree
+- Sequences Used: 33-42 (fresh demo proofs: 39-42)
+
+**Token Infrastructure:**
+- RGB Primaries: RED (0.0.7247682), GREEN (0.0.7247683), BLUE (0.0.7247684)
+- CMY Secondaries: YELLOW (0.0.7247769), CYAN (0.0.7247778), MAGENTA (0.0.7247782)
+- Entity Verdicts: WHITE (0.0.7261514), BLACK (0.0.7261517)
+
+**Validation Status** (HCS Seq 39-42, 2025-11-15):
+- ✅ RED+GREEN→YELLOW (Peirce layer)
+- ✅ GREEN+BLUE→CYAN (Peirce layer)
+- ✅ RED+BLUE→MAGENTA (Peirce layer)
+- ✅ WHITE entity attestation (Floridi layer, evidence: 3 CMY proofs)
+
+**See**: [DEMO_SNAPSHOT_V063.md](../DEMO_SNAPSHOT_V063.md) for complete canonical reference.
+
+---
+
+## Three-Layer Provenance
+
+### Layer 1: CONTRACTCALL (Logic)
+- Contract enforces deterministic rules via `_mixAddDeterministic`
+- Domain: `color.light`, Operator: `mix_add@v1`
+- Validation: Input preimage verification, output determinism
+
+### Layer 2: TOKENMINT (Material Reality)
+- Output token minted via HTS precompile (0x167)
+- Permanent on-chain record of reasoning consequence
+- Supply key held by contract for autonomous minting
+
+### Layer 3: HCS MESSAGE (Meaning/Consensus)
+- Canonical proof manifest posted to consensus topic
+- Ordered, timestamped, immutable
+- Public verification of reasoning provenance
+
+**Compression:**
+```
+ruleHash = keccak256("color.light:mix_add@v1")
+inputsHash = keccak256(sorted([RED, GREEN]))
+proofHash = keccak256(canonical_manifest)
+```
+
+All three layers compress into a single `proofHash` - the **morpheme**.
+
+---
+
+## Contract Architecture
+
+### Core Functions
+
+**Peirce Layer (Additive Reasoning):**
+```solidity
+function reasonAdd(
+    bytes32 proofHash,
+    bytes32 inputsHash,
+    address tokenA,
+    address tokenB,
+    address outputToken,
+    uint64 amount
+) external returns (bool ok)
+```
+
+**Tarski Layer (Subtractive Verification):**
+```solidity
+function checkSub(
+    address tokenA,
+    address tokenB,
+    address tokenC,
+    uint8 epsilon
+) external view returns (bool verdict)
+```
+
+**Floridi Layer (Entity Attestation):**
+```solidity
+function publishEntity(
+    address token,
+    bytes32 manifestHash,
+    string calldata uri
+) external returns (bool ok)
+
+function publishEntityV2(
+    address token,
+    bytes32 manifestHash,
+    string calldata uri,
+    bytes32[] calldata evidenceHashes
+) external returns (bool ok)
+```
+
+**Rule Registry (v0.7.0+):**
+```solidity
+function setRule(
+    bytes32 domain,
+    bytes32 operator,
+    address[] calldata inputs,
+    address outputToken,
+    uint64 ratioNumerator
+) external onlyOwner returns (bytes32 ruleId)
+```
+
+### Storage Layout
+
+```solidity
+// Token addresses (configurable post-deployment)
+address RED_TOKEN_ADDR;
+address GREEN_TOKEN_ADDR;
+address BLUE_TOKEN_ADDR;
+address YELLOW_TOKEN_ADDR;
+address CYAN_TOKEN_ADDR;
+address MAGENTA_TOKEN_ADDR;
+address WHITE_TOKEN_ADDR;
+address BLACK_TOKEN_ADDR;
+
+// Proof tracking
+mapping(bytes32 => bool) proofSeen;           // Replay detection
+mapping(bytes32 => address) cachedOutputs;    // Idempotent results
+
+// Rule registry (v0.6.3+, not yet active)
+mapping(bytes32 => Rule) rules;
+```
+
+### Domain & Operator Constants
+
+```solidity
+bytes32 constant D_LIGHT = keccak256("color.light");
+bytes32 constant D_PAINT = keccak256("color.paint");
+bytes32 constant D_ENTITY_LIGHT = keccak256("color.entity.light");
+bytes32 constant D_ENTITY_PAINT = keccak256("color.entity.paint");
+
+bytes32 constant OP_ADD = keccak256("mix_add@v1");
+bytes32 constant OP_SUB = keccak256("mix_sub@v1");
+bytes32 constant OP_ATTEST = keccak256("attest_palette@v1");
+```
+
+---
+
+## Canonical Rule Definitions
+
+### LIGHT Domain (RGB Additive Color Mixing)
+
+**Rule 1: RED + GREEN → YELLOW**
+- Domain: `color.light`
+- Operator: `mix_add@v1`
+- Inputs: [RED, GREEN]
+- Output: YELLOW
+- Semantics: Additive light mixing
+
+**Rule 2: GREEN + BLUE → CYAN**
+- Domain: `color.light`
+- Operator: `mix_add@v1`
+- Inputs: [GREEN, BLUE]
+- Output: CYAN
+
+**Rule 3: RED + BLUE → MAGENTA**
+- Domain: `color.light`
+- Operator: `mix_add@v1`
+- Inputs: [RED, BLUE]
+- Output: MAGENTA
+
+**Rule 4: YELLOW + CYAN + MAGENTA → WHITE (Entity)**
+- Domain: `color.entity.light`
+- Operator: `attest_palette@v1`
+- Evidence: 3 CMY proofs
+- Verdict: WHITE (complete light spectrum)
+
+**See**: [docs/rules-light-v063.md](rules-light-v063.md) for complete specifications.
+
+---
+
+## Execution Flow
+
+### Additive Proof (Peirce Layer)
+
+1. **Client**: Build canonical proof manifest
+2. **Client**: Post manifest to HCS → get timestamp
+3. **Client**: Compute `proofHash = keccak256(manifest)`
+4. **Client**: Call `reasonAdd(proofHash, inputsHash, tokenA, tokenB, output, amount)`
+5. **Contract**: Verify inputsHash preimage matches (tokenA, tokenB)
+6. **Contract**: Check `proofSeen[proofHash]` for replay
+7. **Contract**: Execute `_mixAddDeterministic(tokenA, tokenB)` → validate output
+8. **Contract**: Mint output token via HTS precompile
+9. **Contract**: Mark `proofSeen[proofHash] = true`
+10. **Contract**: Emit `ProofAdd` event
+
+### Entity Attestation (Floridi Layer)
+
+1. **Client**: Build entity manifest with evidence references
+2. **Client**: Post manifest to HCS → get timestamp
+3. **Client**: Compute `manifestHash = keccak256(manifest)`
+4. **Client**: Call `publishEntityV2(token, manifestHash, uri, evidenceHashes[])`
+5. **Contract**: Validate evidence count (3 CMY proofs)
+6. **Contract**: Verify each `evidenceHash` exists in `proofSeen` mapping
+7. **Contract**: Determine domain verdict (LIGHT→WHITE, PAINT→BLACK)
+8. **Contract**: Mint verdict token via HTS precompile
+9. **Contract**: Emit `ProofEntity` event
+
+---
+
+## Known Limitations (v0.6.3)
+
+### Rule Registry: Present but Not Active
+- **Status**: Infrastructure built in source code but not deployed on-chain
+- **Reason**: Hedera contracts with direct bytecode deployment are immutable
+- **Impact**: Zero - hardcoded rules remain authoritative and fully functional
+- **Resolution**: v0.7.0+ will deploy new contract instance OR implement proxy pattern
+
+### Hardcoded Execution Path
+- **Current**: `_mixAddDeterministic` enforces RGB→CMY logic directly
+- **Future**: Registry-driven execution will replace hardcoded rules
+- **Timeline**: Post-hackathon (v0.7.0+)
+
+---
 
 ## Project Structure
 
 ```
 ontologic/
 ├── contracts/
-│   └── reasoningContract.sol      # Core reasoning contract with NatSpec
+│   └── ReasoningContract.sol        # Core reasoning contract (v0.6.3)
 ├── scripts/
 │   ├── lib/
-│   │   ├── config.js              # Centralized configuration management
-│   │   ├── logger.js              # Structured logging utilities
-│   │   └── proof.js               # Canonical proof generation & validation
-│   ├── deploy.js                  # Contract deployment
-│   ├── mint_red.js                # Create $RED token
-│   ├── mint_blue.js               # Create $BLUE token
-│   ├── mint_purple.js             # Create $PURPLE token with contract supply key
-│   ├── create_topic.js            # Create HCS topic for proofs
-│   ├── set_rule.js                # Configure reasoning rules
-│   └── reason.js                  # Execute proof-of-reasoning operations
-├── hardhat.config.ts              # Hardhat configuration for Hedera
-├── package.json                   # Dependencies and scripts
-├── .env                           # Environment configuration
-└── CLAUDE.md                      # Project documentation
+│   │   ├── config.js                # Environment configuration
+│   │   ├── logger.js                # Structured logging
+│   │   └── canonicalize.js          # Canonical JSON serialization
+│   ├── reason.js                    # Execute RGB→CMY proofs
+│   ├── entity-v06.js                # Execute entity attestation
+│   ├── validate-light-e2e-v063.js   # E2E validation
+│   ├── deploy-sdk.js                # Contract deployment
+│   ├── create_topic.js              # HCS topic creation
+│   ├── migrate-supply-keys.js       # Supply key migration
+│   ├── register-projections.js      # Color projection setup
+│   └── mint_*.js                    # Token creation scripts
+├── examples/
+│   └── mvp/
+│       ├── final/                   # 🔒 Frozen canonical bundles
+│       ├── red-green-yellow.json
+│       ├── green-blue-cyan.json
+│       ├── red-blue-magenta.json
+│       └── entity-white-light.json
+├── docs/
+│   ├── architecture.md              # This file
+│   └── rules-light-v063.md          # Canonical rule definitions
+├── CLAUDE.md                        # Development guide
+├── DEMO_SNAPSHOT_V063.md            # 🔒 Canonical demo reference
+├── JUDGE_CARD.md                    # Quick reference
+└── README.md                        # Project overview
 ```
 
-## Refactor Changes
+---
 
-### 1. Modular Architecture
+## Development Workflow
 
-#### Before
-- All configuration and logic embedded in individual scripts
-- Repeated code for environment loading, error handling, and logging
-- No shared utilities or helpers
+### Quick Start (Demo)
 
-#### After
-- **scripts/lib/config.js**: Centralized configuration with validation
-- **scripts/lib/logger.js**: Structured logging with consistent formatting
-- **scripts/lib/proof.js**: Canonical proof utilities
-- DRY principles applied across all scripts
-
-### 2. Comprehensive JSDoc Annotations
-
-All exported functions now include:
-- `@fileoverview` for module purpose
-- `@module` declarations
-- `@param` type annotations
-- `@returns` documentation
-- `@throws` error conditions
-- `@typedef` for complex types
-
-Example:
-```javascript
-/**
- * @fileoverview Execute proof-of-reasoning operations on Hedera
- * @module scripts/reason
- */
-
-/**
- * Perform a complete proof-of-reasoning operation
- * @param {Object} options - Operation options
- * @param {number} [options.inputUnits=1] - Number of input units to process
- * @returns {Promise<{txHash: string, proof: Object, canonical: string}>}
- * @throws {Error} If operation fails
- */
-async function performReasoning(options = {}) {
-  // ...
-}
-```
-
-### 3. Consistent Error Handling
-
-#### Before
-```javascript
-main().catch((err) => {
-  console.error("Error:", err);
-  process.exit(1);
-});
-```
-
-#### After
-```javascript
-async function main() {
-  try {
-    logger.section("Task Name");
-    // ... operation
-    logger.success("Task complete!");
-  } catch (err) {
-    logger.error("Task failed", err);
-    process.exit(1);
-  }
-}
-```
-
-### 4. Programmatic Exports
-
-All scripts now export their core functions for reuse:
-
-```javascript
-// Export for programmatic use
-export { performReasoning, executeReasoning, submitProofToHCS };
-
-// Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
-}
-```
-
-This enables:
-- Testing without side effects
-- Composition in other scripts
-- Library-style usage
-
-### 5. Enhanced Smart Contract Documentation
-
-#### Contract Structure
-- Organized sections with Solmate-style comments (`/*//////////////...*/`)
-- Comprehensive NatSpec for all functions
-- Clear separation of state, events, modifiers, and functions
-
-#### Example:
-```solidity
-/**
- * @notice Execute a reasoning operation
- * @dev Validates input token balances, mints output tokens, and emits proof event
- * @param ruleId Identifier of rule to execute
- * @param inputUnits Number of input units to process
- * @return minted Number of output tokens minted
- */
-function reason(...) external returns (uint64 minted) {
-  // ...
-}
-```
-
-### 6. Structured Logging
-
-#### Before
-```javascript
-console.log("Creating token...");
-console.log("✅ Token created:", tokenId);
-```
-
-#### After
-```javascript
-logger.section("Create Token");
-logger.info("Creating token...", { treasury, supply });
-logger.success("Token created", { tokenId, evmAddress });
-logger.verificationLinks(txHash);
-```
-
-Benefits:
-- Consistent formatting with timestamps
-- Structured data output (JSON)
-- Clear visual hierarchy
-- Reusable verification link formatter
-
-### 7. Configuration Management
-
-#### lib/config.js Features
-- Environment variable validation
-- Type-safe configuration getters
-- Constants from CLAUDE.md
-- Clear error messages for missing vars
-
-```javascript
-export function getOperatorConfig() {
-  validateEnvVars(["OPERATOR_ID", "OPERATOR_DER_KEY", ...]);
-  return {
-    id: process.env.OPERATOR_ID,
-    derKey: process.env.OPERATOR_DER_KEY,
-    // ...
-  };
-}
-```
-
-### 8. Proof Generation Utilities
-
-#### lib/proof.js Features
-- Canonical proof creation
-- Proof validation
-- Hash verification
-- Type definitions
-
-```javascript
-const { proof, canonical, hash } = createCanonicalProof({
-  domain: "color",
-  subdomain: "paint",
-  operator: "mix_paint",
-  inputs: [...],
-  output: {...},
-});
-```
-
-## Three-Layer Provenance Architecture
-
-The refactored code clearly documents each layer:
-
-### Layer 1: CONTRACTCALL (Logical Validation)
-**Location**: `reasoningContract.sol`
-- Validates input token balances
-- Enforces reasoning rules
-- Performs address-based token checks
-
-### Layer 2: TOKENMINT (Material Consequence)
-**Location**: `reasoningContract.sol` + HTS precompile
-- Mints output token via HTS
-- Requires contract supply key permissions
-- Provides material proof of valid reasoning
-
-### Layer 3: HCS MESSAGE (Consensus-Backed Provenance)
-**Location**: `reason.js` → HCS topic
-- Submits canonical proof JSON
-- Creates append-only reasoning record
-- Enables cross-agent shared memory
-
-## Key Design Patterns
-
-### 1. Fail-Fast Validation
-All configuration and environment variables are validated early:
-```javascript
-const operatorConfig = getOperatorConfig(); // Throws if invalid
-```
-
-### 2. Separation of Concerns
-- **Config**: Environment and constants
-- **Logger**: Output formatting
-- **Proof**: Canonical proof logic
-- **Scripts**: Orchestration and execution
-
-### 3. Async/Await Consistency
-All asynchronous operations use async/await syntax:
-```javascript
-const result = await createRedToken();
-await submitProofToHCS(canonical, topicId);
-```
-
-### 4. Pure Functions
-Proof generation is side-effect-free:
-```javascript
-const { proof, canonical, hash } = createCanonicalProof(params);
-// No mutations, no external calls
-```
-
-## Deployment Workflow
-
-### 1. Initial Setup
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy environment (pre-configured with demo credentials)
+cp .env.example .env
+
+# 3. Run proof chain
+node scripts/reason.js examples/mvp/red-green-yellow.json
+node scripts/reason.js examples/mvp/green-blue-cyan.json
+node scripts/reason.js examples/mvp/red-blue-magenta.json
+node scripts/entity-v06.js examples/mvp/entity-white-light.json
+
+# 4. Validate
+node scripts/validate-light-e2e-v063.js
+```
+
+### Infrastructure Setup (Already Complete)
+
+```bash
+# Create HCS topic
+node scripts/create_topic.js
+
 # Deploy contract
-node scripts/deploy.js
+node scripts/deploy-sdk.js
 
 # Create tokens
 node scripts/mint_red.js
+node scripts/mint_green.js
 node scripts/mint_blue.js
-node scripts/mint_purple.js
+node scripts/mint_yellow.js
+node scripts/mint_cyan.js
+node scripts/mint_magenta.js
+node scripts/mint_white.js
+node scripts/mint_black.js
 
-# Create HCS topic
-node scripts/create_topic.js
+# Migrate supply keys
+node scripts/migrate-supply-keys.js
+
+# Register projections
+node scripts/register-projections.js --token RED
+node scripts/register-projections.js --token GREEN
+node scripts/register-projections.js --token BLUE
+node scripts/register-projections.js --token YELLOW
+node scripts/register-projections.js --token CYAN
+node scripts/register-projections.js --token MAGENTA
 ```
 
-### 2. Configuration
+---
+
+## Verification
+
+**On-Chain:**
+- Contract: https://hashscan.io/testnet/contract/0.0.7261322
+- HCS Topic: https://hashscan.io/testnet/topic/0.0.7239064
+
+**Canonical Proofs (HCS Seq 39-42):**
+- Seq 39: RED+GREEN→YELLOW (`0x8f61b2423b4aacab...`)
+- Seq 40: GREEN+BLUE→CYAN (`0xef80dcbe1178c27f...`)
+- Seq 41: RED+BLUE→MAGENTA (`0xe00da13738d4c2af...`)
+- Seq 42: WHITE entity (`0xeb02c0ad5d7e7b35...`)
+
+**Local:**
 ```bash
-# Set reasoning rule
-node scripts/set_rule.js
+node scripts/validate-light-e2e-v063.js
 ```
 
-### 3. Execution
-```bash
-# Perform reasoning operation
-node scripts/reason.js
-```
+---
 
-## Environment Variables
+## Post-Hackathon Roadmap
 
-All scripts use centralized configuration from `lib/config.js`:
+**v0.7.0 - Registry Activation:**
+- Deploy new contract instance OR implement proxy pattern
+- Migrate to registry-driven execution
+- Enable `publishEntityV2` with strict on-chain validation
+- Preserve proof continuity via HCS
 
-**Required Variables:**
-- `OPERATOR_ID` - Hedera account
-- `OPERATOR_DER_KEY` - SDK format key
-- `OPERATOR_HEX_KEY` - EVM format key
-- `OPERATOR_EVM_ADDR` - EVM address
-- `HEDERA_RPC_URL` - JSON-RPC endpoint
-- `RED_TOKEN_ID` / `RED_ADDR` - Token configuration
-- `BLUE_TOKEN_ID` / `BLUE_ADDR` - Token configuration
-- `PURPLE_TOKEN_ID` / `PURPLE_ADDR` - Token configuration
-- `HCS_TOPIC_ID` - Consensus topic
+**v0.8.0 - Federation:**
+- Multi-domain support (LIGHT + PAINT + custom)
+- Registry governance layer
+- Modular rule operators
 
-## Testing Approach
+**v1.0.0 - Production:**
+- Remove hardcoded rules entirely
+- Full hsphere integration
+- Cross-domain reasoning
 
-With the refactored exports, testing becomes straightforward:
+---
 
-```javascript
-import { performReasoning } from './scripts/reason.js';
-
-// Mock environment
-process.env.OPERATOR_ID = "0.0.test";
-// ...
-
-// Test function
-const result = await performReasoning({ inputUnits: 1 });
-assert(result.txHash);
-assert(result.canonical);
-```
-
-## Future Enhancements
-
-### Hooks Integration (HIP-1195)
-The architecture is "hooks-ready":
-- Pre-hook for validation
-- Post-hook for automatic HCS submission
-- No breaking changes required
-
-### Multi-Rule Support
-Current soft-gate can be removed:
-```solidity
-// Remove MVP constraint
-// require(hasRed && hasBlue, "missing RED or BLUE");
-```
-
-### Batch Operations
-Export structure enables batch reasoning:
-```javascript
-for (const rule of rules) {
-  await performReasoning({ ruleId: rule.id, inputUnits: 10 });
-}
-```
-
-## Migration Notes
-
-### Breaking Changes
-**None**. All refactored scripts maintain the same CLI interface and behavior.
-
-### New Features
-- Programmatic exports for all scripts
-- Structured logging with machine-readable output
-- Centralized configuration management
-- Enhanced error messages
-
-### Deprecated Patterns
-- Direct `dotenv.config()` calls (use `lib/config.js`)
-- Inline `console.log` (use `logger.*` functions)
-- Hardcoded addresses (use constants from `lib/config.js`)
-
-## Performance Considerations
-
-### Improvements
-- Lazy environment loading (only when needed)
-- Single artifact read per script execution
-- Efficient proof hash computation
-
-### Trade-offs
-- Slightly larger bundle size due to utility libraries
-- Additional function call overhead (negligible)
-
-## Security Considerations
-
-### Environment Validation
-All sensitive operations validate required environment variables before execution.
-
-### Contract Security
-- Owner-only administrative functions
-- Input validation before state changes
-- Safe external calls with proper error handling
-
-### Proof Integrity
-- keccak256 hashing for canonical proofs
-- Deterministic rule ID computation
-- Event emission for audit trail
-
-## Conclusion
-
-The refactor successfully modernizes the Ontologic codebase while preserving all logical behaviors. The new architecture provides:
-
-✅ **Clarity**: Well-documented, organized code
-✅ **Maintainability**: DRY principles and modular design
-✅ **Consistency**: Uniform patterns across all scripts
-✅ **Extensibility**: Easy to add new features
-✅ **Testability**: Programmatic exports enable testing
-
-The codebase is now production-ready and follows modern JavaScript/Solidity best practices for Hedera development.
+**Document Status**: FROZEN for hackathon demo
+**Last Updated**: 2025-11-15
+**Version**: v0.6.3

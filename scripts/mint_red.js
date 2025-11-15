@@ -3,12 +3,14 @@
  * @module scripts/mint_red
  *
  * This script creates a $RED token with the following properties:
- * - Initial supply: 10 units
+ * - Initial supply: 1,000,000 units (replenishable operator-controlled axiom)
  * - Decimals: 0
  * - Supply type: Infinite
+ * - Admin key: Operator (allows future updates)
+ * - Supply key: Operator (allows minting more units)
  * - Treasury: Operator account
  *
- * Part of the Ontologic three-layer provenance architecture (Layer 2: TOKENMINT)
+ * Part of the Ontologic RGB primitive layer (human-minted base morphemes)
  */
 
 import {
@@ -34,9 +36,11 @@ async function createRedToken() {
   // Define metadata with RGB hex color for self-describing proofs
   const metadata = { name: "Red", symbol: "RED", color: "#FF0000" };
 
-  logger.info("Creating $RED token...", {
+  logger.info("Creating $RED token with operator control...", {
     treasury: operatorConfig.id,
-    initialSupply: 10,
+    initialSupply: 1000000,
+    adminKey: "operator",
+    supplyKey: "operator",
     metadata,
   });
 
@@ -46,9 +50,11 @@ async function createRedToken() {
     .setTokenMemo(JSON.stringify(metadata))
     .setTokenType(TokenType.FungibleCommon)
     .setDecimals(0)
-    .setInitialSupply(10)
+    .setInitialSupply(1000000) // 1M units for resilient testing
     .setTreasuryAccountId(operatorConfig.id)
     .setSupplyType(TokenSupplyType.Infinite)
+    .setAdminKey(operatorKey.publicKey) // Operator can update token
+    .setSupplyKey(operatorKey.publicKey) // Operator can mint more
     .freezeWith(client)
     .sign(operatorKey);
 

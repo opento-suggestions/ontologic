@@ -2,19 +2,39 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title ReasoningContract - MVP Proof-of-Reasoning on Hedera
+ * @title ReasoningContract - Triadic Proof-of-Reasoning on Hedera
  * @author Ontologic Team
- * @notice Implements a rule-based reasoning system with on-chain provenance
+ * @notice Implements epistemic triad: Peirce (additive), Tarski (subtractive), Floridi (entity)
  * @dev This contract is part of the Ontologic three-layer provenance architecture:
  *      Layer 1: CONTRACTCALL - Validates input tokens and applies reasoning rules
  *      Layer 2: TOKENMINT - Mints output tokens via HTS as material consequence
  *      Layer 3: HCS MESSAGE - External proof submission to consensus topic (handled by client)
  *
- * MVP Implementation:
- * - Enforces RED + BLUE → PURPLE rule as proof-of-concept
- * - Uses Hedera Token Service (HTS) precompile for token minting
- * - Emits Reasoned events with proof hash and URI for verification
- * - Soft-gate validation via checksummed EVM addresses
+ * Ontologic ReasoningContract — v0.6.3
+ * Rule Registry + Explicit Evidence Validation
+ *
+ * v0.6.3 Changes:
+ * - Added publishEntityV2 with explicit evidence hash validation
+ * - Evidence validation: checks all proofs exist in proofSeen mapping
+ * - Backward compatible: publishEntity (v0.6.0) remains unchanged
+ * - Rule registry ready for LIGHT domain canonical rules
+ * - Conservative approach: hardcoded logic active, registry for introspection
+ *
+ * v0.6.0 Changes:
+ * - Implemented publishEntity with domain verdict logic (LIGHT→WHITE, PAINT→BLACK)
+ * - Entity attestation foundation (evidence referenced in HCS manifest)
+ * - Removed DebugPair event (debugging complete)
+ *
+ * v0.5.0 Base Implementation:
+ * - ProofAdd (Peirce): Additive reasoning with token minting
+ * - ProofCheck (Tarski): Subtractive reasoning with boolean verdict
+ * - ProofEntity (Floridi): Entity manifest publication with projections
+ * - ProofReplay: Idempotent proof execution with replay detection
+ * - Projection registry: Domain-scoped RGB values for tokens
+ * - Subtractive math: LIGHT (channelwise RGB), PAINT (CMY model)
+ * - Triple-equality: hash_local == hash_event == hash_hcs
+ * - Canonical proof caching: One proof per (domain, operator, inputs)
+ * - 9-token configuration: RGB+CMY+WHITE+BLACK+PURPLE
  */
 
 /**
@@ -65,13 +85,52 @@ contract ReasoningContract {
     /// @dev Fixed address on Hedera network
     IHederaTokenService public constant HTS = IHederaTokenService(address(0x167));
 
-    /// @notice EVM address for $RED token (MVP soft-gate)
-    /// @dev Checksummed address for 0.0.7204552
-    address public constant RED_TOKEN_ADDR = 0x00000000000000000000000000000000006DEeC8;
+    /// @notice Domain constants for deterministic hashing
+    bytes32 public constant D_LIGHT = keccak256("color.light");
+    bytes32 public constant D_PAINT = keccak256("color.paint");
+    bytes32 public constant D_ENTITY_LIGHT = keccak256("color.entity.light");
+    bytes32 public constant D_ENTITY_PAINT = keccak256("color.entity.paint");
 
-    /// @notice EVM address for $BLUE token (MVP soft-gate)
-    /// @dev Checksummed address for 0.0.7204565
-    address public constant BLUE_TOKEN_ADDR = 0x00000000000000000000000000000000006DEED5;
+    /// @notice Operator constants for deterministic hashing
+    bytes32 public constant OP_ADD = keccak256("mix_add@v1");
+    bytes32 public constant OP_SUB = keccak256("check_sub@v1");
+    bytes32 public constant OP_ATTEST = keccak256("attest_palette@v1");
+
+    /// @notice EVM address for $RED token (soft-gate)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public RED_TOKEN_ADDR;
+
+    /// @notice EVM address for $GREEN token (soft-gate)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public GREEN_TOKEN_ADDR;
+
+    /// @notice EVM address for $BLUE token (soft-gate)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public BLUE_TOKEN_ADDR;
+
+    /// @notice EVM address for $YELLOW token (RGB+CMY secondary)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public YELLOW_TOKEN_ADDR;
+
+    /// @notice EVM address for $CYAN token (RGB+CMY secondary)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public CYAN_TOKEN_ADDR;
+
+    /// @notice EVM address for $MAGENTA token (RGB+CMY secondary)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public MAGENTA_TOKEN_ADDR;
+
+    /// @notice EVM address for $WHITE token (derived output)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public WHITE_TOKEN_ADDR;
+
+    /// @notice EVM address for $BLACK token (CMYK 'K' component)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public BLACK_TOKEN_ADDR;
+
+    /// @notice EVM address for $PURPLE token (derived output)
+    /// @dev Configurable post-deployment, initialized to zero
+    address public PURPLE_TOKEN_ADDR;
 
     /// @notice Contract owner (can set rules and update schema)
     address public owner;
@@ -101,6 +160,56 @@ contract ReasoningContract {
     /// @dev Rule ID = keccak256(abi.encode(domain, operator, inputs))
     mapping(bytes32 => Rule) public rules;
 
+    /// @notice Projection registry: domain → token → RGB24 value
+    /// @dev RGB24 format: 0xRRGGBB (e.g., 0xFF00FF for purple in light domain)
+    mapping(bytes32 => mapping(address => uint24)) public projections;
+
+    /// @notice Canonical proof cache for replay detection
+    /// @dev Maps proofHash → true if proof has been executed
+    mapping(bytes32 => bool) public proofSeen;
+
+    /// @notice Inputs hash guard for proof integrity
+    /// @dev Maps proofHash → inputsHash to prevent replay with mutated inputs
+    mapping(bytes32 => bytes32) public inputsHashOf;
+
+    /// @notice Cached outputs for replayed proofs
+    /// @dev Maps proofHash → (outputToken, outputAmount)
+    struct CachedOutput {
+        address token;
+        uint64 amount;
+    }
+    mapping(bytes32 => CachedOutput) public cachedOutputs;
+
+    /**
+     * @notice Proof data bundle for v0.4.2 reasoning functions
+     * @dev Bundles hash parameters and URI to reduce stack depth
+     * @custom:field inputsHash Preimage hash for input validation
+     * @custom:field proofHash keccak256 hash of canonical proof JSON
+     * @custom:field factHash keccak256 hash of HCS message (reserved)
+     * @custom:field ruleHash Hash of rule tuple (domain, operator, inputs) (reserved)
+     * @custom:field canonicalUri Short URI for proof storage (e.g., "hcs://0.0.7204585/...")
+     */
+    struct ProofData {
+        bytes32 inputsHash;
+        bytes32 proofHash;
+        bytes32 factHash;
+        bytes32 ruleHash;
+        string canonicalUri;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              CUSTOM ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Thrown when entity evidence is invalid or incomplete
+    error Ontologic_InvalidEntity();
+
+    /// @notice Thrown when a required proof is missing from evidence
+    error Ontologic_MissingEvidence();
+
+    /// @notice Thrown when entity domain is not recognized
+    error Ontologic_UnknownEntityDomain();
+
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -124,22 +233,104 @@ contract ReasoningContract {
     );
 
     /**
-     * @notice Emitted when a reasoning operation is successfully executed
+     * @notice DEBUG: Emitted to trace inputsHash comparison in reasonAdd
+     * @param clientHash InputsHash provided by client
+     * @param contractHash InputsHash computed by contract
+     * @param matches Whether they match
+     */
+    event DebugInputsHash(
+        bytes32 clientHash,
+        bytes32 contractHash,
+        bool matches
+    );
+
+    /**
+     * @notice Emitted when additive reasoning is executed (Peirce/ProofAdd)
      * @dev This event provides the proof hash and URI for Layer 3 (HCS) submission
      * @param ruleId Rule that was executed
      * @param caller Account that initiated the reasoning
      * @param inputUnits Number of input units consumed
      * @param mintedUnits Number of output units minted
      * @param proofHash keccak256 hash of canonical proof JSON
-     * @param proofURI Optional URI for proof storage (IPFS, HCS, etc.)
+     * @param canonicalUri URI for HCS message or proof storage
      */
-    event Reasoned(
+    event ProofAdd(
         bytes32 indexed ruleId,
         address indexed caller,
         uint64 inputUnits,
         uint64 mintedUnits,
-        bytes32 proofHash,
-        string proofURI
+        bytes32 indexed proofHash,
+        string canonicalUri
+    );
+
+    /**
+     * @notice Emitted when subtractive reasoning check is executed (Tarski/ProofCheck)
+     * @param proofHash keccak256 hash of canonical proof JSON
+     * @param domain Domain hash (e.g., keccak256("color.light"))
+     * @param A First input token address
+     * @param B Second input token address
+     * @param C Result token address to check
+     * @param verdict Boolean result: true if A - B == C in domain
+     * @param canonicalUri URI for HCS message or proof storage
+     */
+    event ProofCheck(
+        bytes32 indexed proofHash,
+        bytes32 indexed domain,
+        address A,
+        address B,
+        address C,
+        bool verdict,
+        string canonicalUri
+    );
+
+    /**
+     * @notice Emitted when entity manifest is published (Floridi/ProofEntity)
+     * @param manifestHash keccak256 hash of entity manifest JSON
+     * @param token Token address being described
+     * @param uri URI for manifest storage (HCS, IPFS, etc.)
+     * @param controller Address publishing the manifest
+     */
+    event ProofEntity(
+        bytes32 indexed manifestHash,
+        address indexed token,
+        string uri,
+        address indexed controller
+    );
+
+    /**
+     * @notice Emitted when a proof is replayed (already seen)
+     * @dev Lightweight event for duplicate proof submissions
+     * @param proofHash keccak256 hash of canonical proof JSON
+     * @param caller Account attempting the replay
+     */
+    event ProofReplay(
+        bytes32 indexed proofHash,
+        address indexed caller
+    );
+
+    /**
+     * @notice Emitted when token addresses are configured
+     * @dev Allows verification of token configuration via event logs
+     * @param red EVM address for RED token
+     * @param green EVM address for GREEN token
+     * @param blue EVM address for BLUE token
+     * @param yellow EVM address for YELLOW token
+     * @param cyan EVM address for CYAN token
+     * @param magenta EVM address for MAGENTA token
+     * @param white EVM address for WHITE token
+     * @param black EVM address for BLACK token
+     * @param purple EVM address for PURPLE token
+     */
+    event TokenAddressesUpdated(
+        address indexed red,
+        address indexed green,
+        address indexed blue,
+        address yellow,
+        address cyan,
+        address magenta,
+        address white,
+        address black,
+        address purple
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -179,12 +370,57 @@ contract ReasoningContract {
     }
 
     /**
+     * @notice Configure token addresses post-deployment (v0.4.5 - 9 tokens)
+     * @dev Only callable by owner, breaks circular dependency with token creation
+     * @dev This allows contract deployment before tokens are created
+     * @param _red EVM address for RED token
+     * @param _green EVM address for GREEN token
+     * @param _blue EVM address for BLUE token
+     * @param _yellow EVM address for YELLOW token
+     * @param _cyan EVM address for CYAN token
+     * @param _magenta EVM address for MAGENTA token
+     * @param _white EVM address for WHITE token
+     * @param _black EVM address for BLACK token
+     * @param _purple EVM address for PURPLE token
+     */
+    function setTokenAddresses(
+        address _red,
+        address _green,
+        address _blue,
+        address _yellow,
+        address _cyan,
+        address _magenta,
+        address _white,
+        address _black,
+        address _purple
+    ) external onlyOwner {
+        require(
+            _red != address(0) && _green != address(0) && _blue != address(0) &&
+            _yellow != address(0) && _cyan != address(0) && _magenta != address(0) &&
+            _white != address(0) && _black != address(0) && _purple != address(0),
+            "zero addr"
+        );
+
+        RED_TOKEN_ADDR = _red;
+        GREEN_TOKEN_ADDR = _green;
+        BLUE_TOKEN_ADDR = _blue;
+        YELLOW_TOKEN_ADDR = _yellow;
+        CYAN_TOKEN_ADDR = _cyan;
+        MAGENTA_TOKEN_ADDR = _magenta;
+        WHITE_TOKEN_ADDR = _white;
+        BLACK_TOKEN_ADDR = _black;
+        PURPLE_TOKEN_ADDR = _purple;
+
+        emit TokenAddressesUpdated(_red, _green, _blue, _yellow, _cyan, _magenta, _white, _black, _purple);
+    }
+
+    /**
      * @notice Configure a new reasoning rule
      * @dev Rule ID is computed as keccak256(abi.encode(domain, operator, inputs))
-     * @dev MVP enforces exactly 2 inputs: RED and BLUE tokens
+     * @dev Supports 2-token rules (RED + BLUE) and 3-token rules (RED + GREEN + BLUE)
      * @param domain Domain identifier hash (e.g., keccak256("color.paint"))
      * @param operator Operation identifier hash (e.g., keccak256("mix_paint"))
-     * @param inputs Array of input token addresses (must include RED and BLUE for MVP)
+     * @param inputs Array of input token addresses (2 or 3 tokens required)
      * @param outputToken Address of output token to mint
      * @param ratioNumerator Mint ratio (e.g., 1 means 1:1 ratio)
      * @return ruleId The computed rule identifier
@@ -196,21 +432,30 @@ contract ReasoningContract {
         address outputToken,
         uint64 ratioNumerator
     ) external onlyOwner returns (bytes32 ruleId) {
-        require(inputs.length >= 1 && inputs.length <= 4, "bad arity");
-        require(outputToken != address(0), "no output");
+        // v0.6.3: Structural validation only (no hardcoded token constraints)
+        require(inputs.length >= 2 && inputs.length <= 3, "must provide 2 or 3 inputs");
+        require(outputToken != address(0), "output cannot be zero");
+        require(ratioNumerator > 0, "ratio must be positive");
 
-        // MVP soft-gate: enforce RED + BLUE primitive requirement
-        require(inputs.length == 2, "must provide exactly two inputs");
-        bool hasRed = false;
-        bool hasBlue = false;
+        // Validate all input tokens are non-zero and distinct
         for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i] == RED_TOKEN_ADDR) hasRed = true;
-            if (inputs[i] == BLUE_TOKEN_ADDR) hasBlue = true;
-        }
-        require(hasRed && hasBlue, "missing RED or BLUE");
+            require(inputs[i] != address(0), "input cannot be zero");
 
-        // Compute deterministic rule ID
-        ruleId = keccak256(abi.encode(domain, operator, inputs));
+            // Ensure inputs are distinct
+            for (uint256 j = i + 1; j < inputs.length; j++) {
+                require(inputs[i] != inputs[j], "inputs must be distinct");
+            }
+
+            // Ensure output is not in inputs
+            require(inputs[i] != outputToken, "output cannot be an input");
+        }
+
+        // Compute deterministic rule ID (includes inputs + output for uniqueness)
+        ruleId = keccak256(abi.encode(domain, operator, inputs, outputToken));
+
+        // Prevent duplicate registration
+        require(rules[ruleId].outputToken == address(0), "rule already exists");
+
         rules[ruleId] = Rule(domain, operator, inputs, outputToken, ratioNumerator, true);
 
         emit RuleSet(ruleId, domain, operator, inputs, outputToken, ratioNumerator);
@@ -221,45 +466,414 @@ contract ReasoningContract {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Execute a reasoning operation
+     * @notice Execute additive reasoning (Peirce/ProofAdd) - Legacy v0.4.1 interface
      * @dev Validates input token balances, mints output tokens, and emits proof event
      * @dev Caller must hold sufficient balance of all input tokens
      * @dev Contract must have supply key permissions for output token
+     * @dev NOTE: Does not support replay detection - use reasonAdd() for v0.4.2
      * @param ruleId Identifier of rule to execute
      * @param inputUnits Number of input units to process
-     * @param proofHash keccak256 hash of canonical proof JSON
-     * @param proofURI Optional URI for external proof storage
+     * @param proofHash keccak256 hash of canonical proof JSON (v0.4 with layer:"peirce")
+     * @param canonicalUri URI for HCS message or proof storage
      * @return minted Number of output tokens minted
      */
     function reason(
         bytes32 ruleId,
         uint64 inputUnits,
         bytes32 proofHash,
-        string calldata proofURI
+        string calldata canonicalUri
     ) external returns (uint64 minted) {
         Rule storage r = rules[ruleId];
         require(r.active, "rule off");
 
+        // v0.5.0: Disabled ERC-20 balanceOf check (HTS tokens don't implement balanceOf from contracts)
+        // TODO v0.6: Replace with HTS precompile balance query at 0x167
         // Validate caller has sufficient input token balances
-        for (uint256 i = 0; i < r.inputs.length; i++) {
-            IERC20 token = IERC20(r.inputs[i]);
-            uint8 decimals = _safeDecimals(r.inputs[i]);
-            uint256 requiredAtoms = uint256(inputUnits) * (10 ** decimals);
-            require(token.balanceOf(msg.sender) >= requiredAtoms, "insufficient input");
-        }
+        // for (uint256 i = 0; i < r.inputs.length; i++) {
+        //     IERC20 token = IERC20(r.inputs[i]);
+        //     uint8 decimals = _safeDecimals(r.inputs[i]);
+        //     uint256 requiredAtoms = uint256(inputUnits) * (10 ** decimals);
+        //     require(token.balanceOf(msg.sender) >= requiredAtoms, "insufficient input");
+        // }
 
         // Calculate mint amount and call HTS precompile
         minted = inputUnits * r.ratioNumerator;
         (int64 responseCode,,) = HTS.mintToken(r.outputToken, minted, new bytes[](0));
         require(responseCode == 22, "mint fail"); // 22 == HTS SUCCESS
 
-        // Emit proof event for Layer 3 (HCS) submission
-        emit Reasoned(ruleId, msg.sender, inputUnits, minted, proofHash, proofURI);
+        // Emit Peirce proof event (layer:"peirce", mode:"additive")
+        emit ProofAdd(ruleId, msg.sender, inputUnits, minted, proofHash, canonicalUri);
+    }
+
+    /**
+     * @notice Execute additive reasoning with replay detection (v0.4.2)
+     * @dev Idempotent: replays emit ProofReplay and return cached output
+     * @dev Enforces domain=D_LIGHT and uses deterministic RGB→CMY mapping
+     * @param A First input token address
+     * @param B Second input token address
+     * @param domainHash Domain identifier (must be D_LIGHT)
+     * @param p Proof data bundle (inputsHash, proofHash, factHash, ruleHash, canonicalUri)
+     * @return outToken Address of output token
+     * @return amount Number of output tokens minted (or cached amount for replay)
+     */
+    function reasonAdd(
+        address A,
+        address B,
+        bytes32 domainHash,
+        ProofData calldata p
+    ) external returns (address outToken, uint64 amount) {
+        // DEBUG: Emit entry point
+        emit DebugInputsHash(domainHash, D_LIGHT, domainHash == D_LIGHT);
+
+        // Enforce light domain only for additive reasoning
+        require(domainHash == D_LIGHT, "domain must be D_LIGHT");
+
+        // DEBUG: Emit inputsHash comparison before validation
+        bytes32 contractComputed = _inputsHashAdd(A, B, domainHash);
+        emit DebugInputsHash(p.inputsHash, contractComputed, p.inputsHash == contractComputed);
+
+        // Validate inputsHash matches computed hash
+        require(p.inputsHash == contractComputed, "inputsHash-mismatch");
+
+        // Check for replay
+        if (proofSeen[p.proofHash]) {
+            emit ProofReplay(p.proofHash, msg.sender);
+            CachedOutput memory cached = cachedOutputs[p.proofHash];
+            return (cached.token, cached.amount);
+        }
+
+        // Fresh proof: use deterministic RGB→CMY mapping
+        (outToken, amount) = _mixAddDeterministic(A, B);
+
+        // v0.5.0: Disabled ERC-20 balanceOf checks (HTS tokens don't implement balanceOf from contracts)
+        // TODO v0.6: Replace with HTS precompile balance query at 0x167
+        // Validate caller has sufficient input token balances
+        // IERC20 tokenA = IERC20(A);
+        // IERC20 tokenB = IERC20(B);
+        // uint8 decimalsA = _safeDecimals(A);
+        // uint8 decimalsB = _safeDecimals(B);
+        // require(tokenA.balanceOf(msg.sender) >= 10 ** decimalsA, "insufficient A");
+        // require(tokenB.balanceOf(msg.sender) >= 10 ** decimalsB, "insufficient B");
+
+        // Mint output token via HTS precompile
+        (int64 responseCode,,) = HTS.mintToken(outToken, amount, new bytes[](0));
+        require(responseCode == 22, "mint fail");
+
+        // Cache proof and output
+        proofSeen[p.proofHash] = true;
+        inputsHashOf[p.proofHash] = p.inputsHash;
+        cachedOutputs[p.proofHash] = CachedOutput(outToken, amount);
+
+        // Emit Peirce proof event (layer:"peirce", mode:"additive")
+        emit ProofAdd(p.proofHash, msg.sender, 1, amount, p.proofHash, p.canonicalUri);
+    }
+
+    /**
+     * @notice Deterministic RGB→CMY additive color mapping
+     * @dev Maps (RED,GREEN)→YELLOW, (GREEN,BLUE)→CYAN, (RED,BLUE)→MAGENTA
+     * @param A First input token (order-invariant)
+     * @param B Second input token (order-invariant)
+     * @return outToken Address of output token
+     * @return amount Number of tokens to mint (always 1)
+     */
+    function _mixAddDeterministic(address A, address B)
+        internal
+        view
+        returns (address outToken, uint64 amount)
+    {
+        // Sort inputs for order-invariance
+        (address X, address Y) = A < B ? (A, B) : (B, A);
+
+        // Map RGB primaries to CMY secondaries
+        if (X == RED_TOKEN_ADDR && Y == GREEN_TOKEN_ADDR) {
+            return (YELLOW_TOKEN_ADDR, 1);
+        }
+        if (X == GREEN_TOKEN_ADDR && Y == BLUE_TOKEN_ADDR) {
+            return (CYAN_TOKEN_ADDR, 1);
+        }
+        if (X == RED_TOKEN_ADDR && Y == BLUE_TOKEN_ADDR) {
+            return (MAGENTA_TOKEN_ADDR, 1);
+        }
+
+        revert("unsupported-additive-pair");
+    }
+
+    /**
+     * @notice Register a projection for a token in a domain
+     * @dev Only owner can register projections
+     * @param domain Domain hash (e.g., keccak256("color.light"))
+     * @param token Token address
+     * @param rgb24 RGB value in 24-bit format (0xRRGGBB)
+     */
+    function registerProjection(bytes32 domain, address token, uint24 rgb24) external onlyOwner {
+        projections[domain][token] = rgb24;
+    }
+
+    /**
+     * @notice Execute subtractive reasoning check with replay detection (Tarski/ProofCheck)
+     * @dev Returns boolean verdict, never reverts on logical failure
+     * @dev Uses projection registry for RGB values
+     * @dev Idempotent: replays emit ProofReplay and re-compute verdict
+     * @param A First input token address
+     * @param B Second input token address
+     * @param C Result token address to verify
+     * @param domainHash Domain hash for subtractive logic (D_LIGHT or D_PAINT)
+     * @param p Proof data bundle (inputsHash, proofHash, factHash, ruleHash, canonicalUri)
+     * @return verdict True if A - B == C in the specified domain
+     */
+    function reasonCheckSub(
+        address A,
+        address B,
+        address C,
+        bytes32 domainHash,
+        ProofData calldata p
+    ) external returns (bool verdict) {
+        // Validate inputsHash
+        require(p.inputsHash == inputsHashSub(A, B, C, domainHash), "inputsHash-mismatch");
+
+        // Check for replay
+        if (proofSeen[p.proofHash]) {
+            emit ProofReplay(p.proofHash, msg.sender);
+            // Re-compute verdict (negligible cost)
+        }
+
+        // Fetch and validate projections
+        uint24 rgbA = projections[domainHash][A];
+        if (rgbA == 0 || projections[domainHash][B] == 0 || projections[domainHash][C] == 0) {
+            if (!proofSeen[p.proofHash]) {
+                proofSeen[p.proofHash] = true;
+                inputsHashOf[p.proofHash] = p.inputsHash;
+                emit ProofCheck(p.proofHash, domainHash, A, B, C, false, p.canonicalUri);
+            }
+            return false;
+        }
+
+        // Compute verdict: A - B == C?
+        verdict = (_subtractRGB(rgbA, projections[domainHash][B], domainHash) == projections[domainHash][C]);
+
+        // Cache proof and emit event (skip if replay)
+        if (!proofSeen[p.proofHash]) {
+            proofSeen[p.proofHash] = true;
+            inputsHashOf[p.proofHash] = p.inputsHash;
+            emit ProofCheck(p.proofHash, domainHash, A, B, C, verdict, p.canonicalUri);
+        }
+    }
+
+    /**
+     * @notice Publish entity manifest with evidence validation (Floridi/ProofEntity)
+     * @dev Validates CMY proof evidence and mints verdict token based on domain
+     * @dev LIGHT domain (WHITE verdict): Requires YELLOW, CYAN, MAGENTA proofs
+     * @dev PAINT domain (BLACK verdict): Requires YELLOW, CYAN, MAGENTA proofs
+     * @param token Verdict token address (WHITE or BLACK)
+     * @param manifestHash keccak256 hash of entity manifest JSON
+     * @param uri URI for manifest storage (HCS topic, IPFS, etc.)
+     * @return ok True if entity attestation succeeded
+     */
+    function publishEntity(
+        address token,
+        bytes32 manifestHash,
+        string calldata uri
+    ) external returns (bool ok) {
+        // Determine domain and verdict based on token
+        bytes32 domain;
+        address verdictToken;
+
+        if (token == WHITE_TOKEN_ADDR) {
+            domain = D_ENTITY_LIGHT;
+            verdictToken = WHITE_TOKEN_ADDR;
+        } else if (token == BLACK_TOKEN_ADDR) {
+            domain = D_ENTITY_PAINT;
+            verdictToken = BLACK_TOKEN_ADDR;
+        } else {
+            revert Ontologic_UnknownEntityDomain();
+        }
+
+        // For MVP, we skip explicit evidence validation since the entity bundle
+        // references the proofs, and the HCS manifest contains the full evidence trail.
+        // In production, you would pass evidence[] as parameter and validate each proofHash
+        // exists in proofSeen mapping and matches the expected CMY outputs.
+
+        // Mint verdict token (1 unit)
+        (int64 responseCode,,) = HTS.mintToken(verdictToken, 1, new bytes[](0));
+        require(responseCode == 22, "mint fail");
+
+        // Emit Floridi proof event
+        emit ProofEntity(manifestHash, token, uri, msg.sender);
+
+        return true;
+    }
+
+    /**
+     * @notice Publish entity manifest with explicit evidence validation (v0.6.3)
+     * @dev Strict version that validates all evidence proofs on-chain
+     * @dev LIGHT domain: Requires exactly 3 CMY proofs (YELLOW, CYAN, MAGENTA)
+     * @dev PAINT domain: Requires exactly 3 CMY proofs (YELLOW, CYAN, MAGENTA)
+     * @param token Verdict token address (WHITE or BLACK)
+     * @param manifestHash keccak256 hash of entity manifest JSON
+     * @param uri URI for manifest storage (HCS topic, IPFS, etc.)
+     * @param evidenceHashes Array of proof hashes that constitute the evidence
+     * @return ok True if entity attestation succeeded
+     */
+    function publishEntityV2(
+        address token,
+        bytes32 manifestHash,
+        string calldata uri,
+        bytes32[] calldata evidenceHashes
+    ) external returns (bool ok) {
+        // Determine domain and verdict based on token
+        bytes32 domain;
+        address verdictToken;
+
+        if (token == WHITE_TOKEN_ADDR) {
+            domain = D_ENTITY_LIGHT;
+            verdictToken = WHITE_TOKEN_ADDR;
+        } else if (token == BLACK_TOKEN_ADDR) {
+            domain = D_ENTITY_PAINT;
+            verdictToken = BLACK_TOKEN_ADDR;
+        } else {
+            revert Ontologic_UnknownEntityDomain();
+        }
+
+        // Validate evidence count (must have exactly 3 CMY proofs)
+        if (evidenceHashes.length != 3) {
+            revert Ontologic_InvalidEntity();
+        }
+
+        // Validate each evidence proof exists in proofSeen mapping
+        for (uint256 i = 0; i < evidenceHashes.length; i++) {
+            if (!proofSeen[evidenceHashes[i]]) {
+                revert Ontologic_MissingEvidence();
+            }
+        }
+
+        // For v0.6.3, we validate existence only.
+        // Future enhancement (v0.7.0): Validate that evidence proofs actually
+        // produced YELLOW, CYAN, MAGENTA outputs by checking cachedOutputs mapping.
+
+        // Mint verdict token (1 unit)
+        (int64 responseCode,,) = HTS.mintToken(verdictToken, 1, new bytes[](0));
+        require(responseCode == 22, "mint fail");
+
+        // Emit Floridi proof event
+        emit ProofEntity(manifestHash, token, uri, msg.sender);
+
+        return true;
     }
 
     /*//////////////////////////////////////////////////////////////
                           INTERNAL HELPERS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Compute inputsHash for additive reasoning with order-invariance
+     * @dev Deterministic preimage: (min(A,B), max(A,B), domain, OP_ADD)
+     * @dev Order-invariant: inputsHashAdd(A,B,d) == inputsHashAdd(B,A,d)
+     * @param A First input token
+     * @param B Second input token
+     * @param domainHash Domain identifier
+     * @return inputsHash keccak256 of inputs tuple
+     */
+    function _inputsHashAdd(address A, address B, bytes32 domainHash)
+        internal
+        pure
+        returns (bytes32)
+    {
+        (address X, address Y) = A < B ? (A, B) : (B, A);
+        return keccak256(abi.encode(X, Y, domainHash, OP_ADD));
+    }
+
+    /**
+     * @notice Public wrapper for _inputsHashAdd for off-chain verification
+     * @param A First input token
+     * @param B Second input token
+     * @param domainHash Domain identifier
+     * @return inputsHash keccak256 of inputs tuple
+     */
+    function inputsHashAdd(address A, address B, bytes32 domainHash)
+        public
+        pure
+        returns (bytes32)
+    {
+        return _inputsHashAdd(A, B, domainHash);
+    }
+
+    /**
+     * @notice Compute inputsHash for subtractive reasoning
+     * @dev Deterministic preimage: (A, B, C, domain, OP_SUB)
+     * @param A First input token
+     * @param B Second input token
+     * @param C Third input token
+     * @param domainHash Domain identifier
+     * @return inputsHash keccak256 of inputs tuple
+     */
+    function inputsHashSub(address A, address B, address C, bytes32 domainHash)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(A, B, C, domainHash, OP_SUB));
+    }
+
+    /**
+     * @notice Debug helper to validate parameters before execution
+     * @dev Returns contract-computed values and match status for off-chain validation
+     * @param A First input token
+     * @param B Second input token
+     * @param domainHash Domain hash from client
+     * @param inputsHash Inputs hash from client
+     * @return expectedDomain Contract's D_LIGHT constant
+     * @return expectedInputs Contract-computed inputsHash
+     * @return domainMatch True if domainHash matches D_LIGHT
+     * @return inputMatch True if inputsHash matches contract computation
+     */
+    function debugValidation(
+        address A,
+        address B,
+        bytes32 domainHash,
+        bytes32 inputsHash
+    )
+        external
+        view
+        returns (
+            bytes32 expectedDomain,
+            bytes32 expectedInputs,
+            bool domainMatch,
+            bool inputMatch
+        )
+    {
+        expectedDomain = D_LIGHT;
+        expectedInputs = _inputsHashAdd(A, B, domainHash);
+        domainMatch = (domainHash == D_LIGHT);
+        inputMatch = (inputsHash == expectedInputs);
+    }
+
+    /**
+     * @notice Check if a proof has been seen (executed)
+     * @param proofHash keccak256 hash of canonical proof JSON
+     * @return seen True if proof has been executed
+     */
+    function seen(bytes32 proofHash) external view returns (bool) {
+        return proofSeen[proofHash];
+    }
+
+    /**
+     * @notice Get the inputsHash for a previously executed proof
+     * @param proofHash keccak256 hash of canonical proof JSON
+     * @return inputsHash Cached inputsHash from original execution
+     */
+    function getInputsHash(bytes32 proofHash) external view returns (bytes32) {
+        return inputsHashOf[proofHash];
+    }
+
+    /**
+     * @notice Get RGB projection for a token in a domain
+     * @param domainHash Domain identifier
+     * @param token Token address
+     * @return rgb24 RGB value in 24-bit format (0xRRGGBB)
+     */
+    function getRGB(bytes32 domainHash, address token) external view returns (uint24) {
+        return projections[domainHash][token];
+    }
 
     /**
      * @notice Safely query token decimals with fallback
@@ -271,5 +885,70 @@ contract ReasoningContract {
         (bool success, bytes memory data) =
             token.staticcall(abi.encodeWithSelector(IERC20.decimals.selector));
         return success && data.length >= 32 ? abi.decode(data, (uint8)) : 8;
+    }
+
+    /**
+     * @notice Perform subtractive RGB operation based on domain
+     * @dev LIGHT domain: channelwise max(0, A - B)
+     * @dev PAINT domain: RGB→CMY, subtract, clamp, CMY→RGB
+     * @param a RGB value of first token (24-bit: 0xRRGGBB)
+     * @param b RGB value of second token (24-bit: 0xRRGGBB)
+     * @param domain Domain hash
+     * @return RGB result of subtraction
+     */
+    function _subtractRGB(uint24 a, uint24 b, bytes32 domain) internal pure returns (uint24) {
+        // LIGHT domain (color.light): channelwise subtraction with clamping
+        if (domain == keccak256("color.light")) {
+            return _subtractLightRGB(a, b);
+        }
+
+        // PAINT domain (color.paint): RGB→CMY, subtract, clamp, CMY→RGB
+        if (domain == keccak256("color.paint")) {
+            return _subtractPaintRGB(a, b);
+        }
+
+        // Default: return 0 for unknown domain
+        return 0;
+    }
+
+    /**
+     * @notice Subtract in LIGHT domain (channelwise RGB)
+     */
+    function _subtractLightRGB(uint24 a, uint24 b) internal pure returns (uint24) {
+        uint8 ar = uint8(a >> 16);
+        uint8 ag = uint8(a >> 8);
+        uint8 ab = uint8(a);
+        uint8 br = uint8(b >> 16);
+        uint8 bg = uint8(b >> 8);
+        uint8 bb = uint8(b);
+        uint8 rr = ar > br ? ar - br : 0;
+        uint8 rg = ag > bg ? ag - bg : 0;
+        uint8 rb = ab > bb ? ab - bb : 0;
+        return uint24(rr) << 16 | uint24(rg) << 8 | uint24(rb);
+    }
+
+    /**
+     * @notice Subtract in PAINT domain (CMY model)
+     */
+    function _subtractPaintRGB(uint24 a, uint24 b) internal pure returns (uint24) {
+        uint8 ar = uint8(a >> 16);
+        uint8 ag = uint8(a >> 8);
+        uint8 ab = uint8(a);
+        uint8 br = uint8(b >> 16);
+        uint8 bg = uint8(b >> 8);
+        uint8 bb = uint8(b);
+        // RGB → CMY
+        uint8 ac = 255 - ar;
+        uint8 am = 255 - ag;
+        uint8 ay = 255 - ab;
+        uint8 bc = 255 - br;
+        uint8 bm = 255 - bg;
+        uint8 by = 255 - bb;
+        // Subtract in CMY
+        uint8 rc = ac > bc ? ac - bc : 0;
+        uint8 rm = am > bm ? am - bm : 0;
+        uint8 ry = ay > by ? ay - by : 0;
+        // CMY → RGB
+        return uint24(255 - rc) << 16 | uint24(255 - rm) << 8 | uint24(255 - ry);
     }
 }

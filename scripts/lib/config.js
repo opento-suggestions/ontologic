@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from project root
-// Use override: true to override system environment variables with .env values
+// Now uses .env (copy of .env.example) for standard dotenv compatibility
 dotenv.config({ path: path.join(__dirname, "..", "..", ".env"), override: true });
 
 /**
@@ -80,7 +80,7 @@ export function getNetworkConfig() {
 
 /**
  * Get token configuration from environment
- * @param {('RED'|'BLUE'|'PURPLE')} tokenName - Token name
+ * @param {('RED'|'GREEN'|'BLUE'|'PURPLE'|'WHITE'|'GREY')} tokenName - Token name
  * @returns {TokenConfig}
  */
 export function getTokenConfig(tokenName) {
@@ -104,19 +104,65 @@ export function getHcsTopicId() {
 }
 
 /**
- * Deployed contract address (from CLAUDE.md)
+ * Deployed contract address (Alpha v0.4.2 - Idempotent Proofs)
  * @constant {string}
  */
-export const DEPLOYED_CONTRACT_ADDRESS = "0xC739f496E8dbc146a54fDBF47080AE557FF8Ea27";
+export const DEPLOYED_CONTRACT_ADDRESS = process.env.CONTRACT_ADDR || "0x97e00a2597C20b490fE869204B0728EF6c9F23eA";
 
 /**
- * Active rule ID (from CLAUDE.md)
- * @constant {string}
+ * Active rule IDs (Alpha v0.3 - Dual-Domain)
+ * @constant {Object}
  */
-export const ACTIVE_RULE_ID = "0xf2f46b98fc2fc538ecffaca7cdc83e722b23beeba55aa086b5c916a49ef943bd";
+export const ACTIVE_RULE_IDS = {
+  LIGHT: "0xdd1480153360259fb34ae591a5e4be71d81827a82318549ca838be2b91346e65",  // RED + GREEN + BLUE → WHITE
+  PAINT: "0x4e8881312f98809e731a219db65a5bdf0df53d4e966f948cd11c091e8ae047ea",  // RED + GREEN + BLUE → GREY
+};
 
 /**
  * Schema hash for reasoning protocol v0
  * @constant {string}
  */
 export const SCHEMA_HASH = "0xf1944d69e7680639ebde87ed129a18522cdf8415d254b9a12d638df5e1ddd934";
+
+/**
+ * Get complete configuration for v0.4.2 scripts
+ * @returns {Object} Config object with rpc, pkey, contract, rule, signer, hcsTopicId, hcsPost
+ */
+export async function getConfig() {
+  const { Client, TopicMessageSubmitTransaction } = await import("@hashgraph/sdk");
+  const operatorConfig = getOperatorConfig();
+  const networkConfig = getNetworkConfig();
+  const topicId = getHcsTopicId();
+
+  return {
+    rpc: networkConfig.rpcUrl,
+    pkey: operatorConfig.hexKey,
+    contract: DEPLOYED_CONTRACT_ADDRESS,
+    rule: {
+      codeHash: process.env.CODE_HASH,
+      version: process.env.RULE_VERSION || "v0.4.2",
+      fnAdd: process.env.FN_SELECTOR_ADD,
+      fnAddSel: process.env.FN_SELECTOR_ADD,
+      fnSub: process.env.FN_SELECTOR_SUB,
+    },
+    signer: operatorConfig.evmAddr,
+    hcsTopicId: topicId,
+    async hcsPost(topicId, bytes) {
+      const client = Client.forTestnet().setOperator(
+        operatorConfig.id,
+        operatorConfig.derKey
+      );
+      const submitTx = await new TopicMessageSubmitTransaction()
+        .setTopicId(topicId)
+        .setMessage(bytes)
+        .execute(client);
+      const submitRecord = await submitTx.getRecord(client);
+      const consensusTimestamp = submitRecord.consensusTimestamp;
+      client.close();
+      return {
+        sequence: submitRecord.receipt.topicSequenceNumber?.toString() || "0",
+        consensusTimestamp: `${consensusTimestamp.seconds}.${consensusTimestamp.nanos}`,
+      };
+    },
+  };
+}
