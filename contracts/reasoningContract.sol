@@ -10,13 +10,19 @@ pragma solidity ^0.8.20;
  *      Layer 2: TOKENMINT - Mints output tokens via HTS as material consequence
  *      Layer 3: HCS MESSAGE - External proof submission to consensus topic (handled by client)
  *
- * Ontologic ReasoningContract — v0.6.0
- * Floridi Layer: Evidence-based entity attestation with domain verdict logic.
+ * Ontologic ReasoningContract — v0.6.3
+ * Rule Registry + Explicit Evidence Validation
+ *
+ * v0.6.3 Changes:
+ * - Added publishEntityV2 with explicit evidence hash validation
+ * - Evidence validation: checks all proofs exist in proofSeen mapping
+ * - Backward compatible: publishEntity (v0.6.0) remains unchanged
+ * - Rule registry ready for LIGHT domain canonical rules
+ * - Conservative approach: hardcoded logic active, registry for introspection
  *
  * v0.6.0 Changes:
- * - Implemented publishEntity with evidence validation
- * - Added domain verdict logic (LIGHT→WHITE, PAINT→BLACK)
- * - Entity attestation requires valid CMY proof evidence
+ * - Implemented publishEntity with domain verdict logic (LIGHT→WHITE, PAINT→BLACK)
+ * - Entity attestation foundation (evidence referenced in HCS manifest)
  * - Removed DebugPair event (debugging complete)
  *
  * v0.5.0 Base Implementation:
@@ -426,32 +432,30 @@ contract ReasoningContract {
         address outputToken,
         uint64 ratioNumerator
     ) external onlyOwner returns (bytes32 ruleId) {
-        require(inputs.length >= 1 && inputs.length <= 4, "bad arity");
-        require(outputToken != address(0), "no output");
+        // v0.6.3: Structural validation only (no hardcoded token constraints)
+        require(inputs.length >= 2 && inputs.length <= 3, "must provide 2 or 3 inputs");
+        require(outputToken != address(0), "output cannot be zero");
+        require(ratioNumerator > 0, "ratio must be positive");
 
-        // Soft-gate validation: support 2-token and 3-token rules
-        require(inputs.length == 2 || inputs.length == 3, "must provide 2 or 3 inputs");
-
-        bool hasRed = false;
-        bool hasGreen = false;
-        bool hasBlue = false;
-
+        // Validate all input tokens are non-zero and distinct
         for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i] == RED_TOKEN_ADDR) hasRed = true;
-            if (inputs[i] == GREEN_TOKEN_ADDR) hasGreen = true;
-            if (inputs[i] == BLUE_TOKEN_ADDR) hasBlue = true;
+            require(inputs[i] != address(0), "input cannot be zero");
+
+            // Ensure inputs are distinct
+            for (uint256 j = i + 1; j < inputs.length; j++) {
+                require(inputs[i] != inputs[j], "inputs must be distinct");
+            }
+
+            // Ensure output is not in inputs
+            require(inputs[i] != outputToken, "output cannot be an input");
         }
 
-        // For 2-token rules: require RED + BLUE
-        // For 3-token rules: require RED + GREEN + BLUE
-        if (inputs.length == 2) {
-            require(hasRed && hasBlue, "2-token rules require RED and BLUE");
-        } else if (inputs.length == 3) {
-            require(hasRed && hasGreen && hasBlue, "3-token rules require RED, GREEN, and BLUE");
-        }
+        // Compute deterministic rule ID (includes inputs + output for uniqueness)
+        ruleId = keccak256(abi.encode(domain, operator, inputs, outputToken));
 
-        // Compute deterministic rule ID
-        ruleId = keccak256(abi.encode(domain, operator, inputs));
+        // Prevent duplicate registration
+        require(rules[ruleId].outputToken == address(0), "rule already exists");
+
         rules[ruleId] = Rule(domain, operator, inputs, outputToken, ratioNumerator, true);
 
         emit RuleSet(ruleId, domain, operator, inputs, outputToken, ratioNumerator);
@@ -688,6 +692,63 @@ contract ReasoningContract {
         // references the proofs, and the HCS manifest contains the full evidence trail.
         // In production, you would pass evidence[] as parameter and validate each proofHash
         // exists in proofSeen mapping and matches the expected CMY outputs.
+
+        // Mint verdict token (1 unit)
+        (int64 responseCode,,) = HTS.mintToken(verdictToken, 1, new bytes[](0));
+        require(responseCode == 22, "mint fail");
+
+        // Emit Floridi proof event
+        emit ProofEntity(manifestHash, token, uri, msg.sender);
+
+        return true;
+    }
+
+    /**
+     * @notice Publish entity manifest with explicit evidence validation (v0.6.3)
+     * @dev Strict version that validates all evidence proofs on-chain
+     * @dev LIGHT domain: Requires exactly 3 CMY proofs (YELLOW, CYAN, MAGENTA)
+     * @dev PAINT domain: Requires exactly 3 CMY proofs (YELLOW, CYAN, MAGENTA)
+     * @param token Verdict token address (WHITE or BLACK)
+     * @param manifestHash keccak256 hash of entity manifest JSON
+     * @param uri URI for manifest storage (HCS topic, IPFS, etc.)
+     * @param evidenceHashes Array of proof hashes that constitute the evidence
+     * @return ok True if entity attestation succeeded
+     */
+    function publishEntityV2(
+        address token,
+        bytes32 manifestHash,
+        string calldata uri,
+        bytes32[] calldata evidenceHashes
+    ) external returns (bool ok) {
+        // Determine domain and verdict based on token
+        bytes32 domain;
+        address verdictToken;
+
+        if (token == WHITE_TOKEN_ADDR) {
+            domain = D_ENTITY_LIGHT;
+            verdictToken = WHITE_TOKEN_ADDR;
+        } else if (token == BLACK_TOKEN_ADDR) {
+            domain = D_ENTITY_PAINT;
+            verdictToken = BLACK_TOKEN_ADDR;
+        } else {
+            revert Ontologic_UnknownEntityDomain();
+        }
+
+        // Validate evidence count (must have exactly 3 CMY proofs)
+        if (evidenceHashes.length != 3) {
+            revert Ontologic_InvalidEntity();
+        }
+
+        // Validate each evidence proof exists in proofSeen mapping
+        for (uint256 i = 0; i < evidenceHashes.length; i++) {
+            if (!proofSeen[evidenceHashes[i]]) {
+                revert Ontologic_MissingEvidence();
+            }
+        }
+
+        // For v0.6.3, we validate existence only.
+        // Future enhancement (v0.7.0): Validate that evidence proofs actually
+        // produced YELLOW, CYAN, MAGENTA outputs by checking cachedOutputs mapping.
 
         // Mint verdict token (1 unit)
         (int64 responseCode,,) = HTS.mintToken(verdictToken, 1, new bytes[](0));

@@ -1,7 +1,7 @@
 {
   "_format": "hh3-artifact-1",
   "contractName": "IHederaTokenService",
-  "sourceName": "contracts/reasoningContract.sol",
+  "sourceName": "contracts/ReasoningContract.sol",
   "abi": [
     {
       "inputs": [
@@ -48,6 +48,6 @@
   "linkReferences": {},
   "deployedLinkReferences": {},
   "immutableReferences": {},
-  "inputSourceName": "project/contracts/reasoningContract.sol",
-  "buildInfoId": "solc-0_8_20-d2a0e4c2100045c570a1aef1af600427300ea820"
+  "inputSourceName": "project/contracts/ReasoningContract.sol",
+  "buildInfoId": "solc-0_8_20-6d6a1d1b9c49737e4184d80b86e8a47c994e8158"
 }
