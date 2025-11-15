@@ -1,8 +1,0 @@
-{
-  "nsid": "ontologic.v045",
-  "domain": "color.light",
-  "operator": "mix_add@v1",
-  "inputs": ["RED", "BLUE"],
-  "output": "PURPLE",
-  "ratio": 1
-}
