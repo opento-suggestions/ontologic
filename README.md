@@ -1,12 +1,12 @@
-# Ontologic v0.6.3  The Glass Box Protocol
+# Ontologic v0.6.3 ⌧本 :: The Glass Box Protocol
 
 **Triune Proof-of-Reasoning on Hedera (HTS + HCS + Smart Contracts)**
 
-< **Website**: [https://ontologic-uv6.caffeine.xyz/](https://ontologic-uv6.caffeine.xyz/)
+<案 **Website**: [https://ontologic-uv6.caffeine.xyz/](https://ontologic-uv6.caffeine.xyz/)
 
 ---
 
-## P What Ontologic Is
+## 河 What Ontologic Is
 
 Ontologic turns AI/agentic reasoning from a **black box** into a **glass box** by producing verifiable, on-chain proofs of *why* a system made a decision.
 
@@ -28,7 +28,7 @@ This repo demonstrates the entire flow end-to-end.
 
 ---
 
-## <� Live On-Testnet
+## <根 Live On-Testnet
 
 **Contract:** `0.0.7261322`
 [https://hashscan.io/testnet/contract/0.0.7261322](https://hashscan.io/testnet/contract/0.0.7261322)
@@ -41,7 +41,7 @@ All canonical artifacts: [`CANONICAL_ARTIFACTS.md`](CANONICAL_ARTIFACTS.md)
 
 ---
 
-## <� Token System (HTS)
+## <單位 Token System (HTS)
 
 ### RGB (axioms)
 
@@ -61,7 +61,7 @@ All canonical artifacts: [`CANONICAL_ARTIFACTS.md`](CANONICAL_ARTIFACTS.md)
 
 ---
 
-## =' Installation
+## 何 Installation
 
 ```bash
 npm install
@@ -72,7 +72,7 @@ Set your operator account + private key in `.env`.
 
 ---
 
-## =� Run the Demo Proofs
+## 示範 Run the Demo Proofs
 
 Ontologic includes frozen example bundles in:
 
@@ -116,7 +116,8 @@ node scripts/validate-light-e2e-v063.js
 
 ---
 
-## = Morpheme: The Proof Compression Unit
+## =
+ Morpheme: The Proof Compression Unit
 
 Ontologic compresses:
 
@@ -131,23 +132,23 @@ into:
 proofHash = keccak256(...)
 ```
 
-This is the "TCP/IP for reasoning provenance" moment 
+This is the "TCP/IP for reasoning provenance" moment 地址證明
 a **single hash** representing a **complete, verifiable thought**.
 
 ---
 
-## =� Canonical "Bytes Used in Demo"
+## 代表 Canonical "Bytes Used in Demo"
 
 All demo proofs (HCS sequences 3942) + hashes:
 See: [`DEMO_SNAPSHOT_V063.md`](DEMO_SNAPSHOT_V063.md)
 
 ---
 
-## = v0.6.3 Architecture
+## 个完整的 v0.6.3 Architecture
 
 Full explanation of:
 
-* Peirce � Tarski � Floridi layers
+* Peirce ’ Tarski ’ Floridi layers
 * How morphemes work
 * Contract internals
 * Token flow
@@ -157,7 +158,7 @@ See: [`docs/architecture.md`](docs/architecture.md)
 
 ---
 
-## =� Project Structure
+## 可验证的 Project Structure
 
 ```
 contracts/                 ReasoningContract v0.6.3
@@ -169,7 +170,7 @@ archive/                   All legacy material
 
 ---
 
-## >� Roadmap (Post-hackathon)
+## 想法的 Roadmap (Post-hackathon)
 
 * v0.7  Rule registry activation & proxy-pattern migration
 * v0.8  Multi-domain reasoning + subtractive "paint" model
@@ -178,13 +179,13 @@ archive/                   All legacy material
 
 ---
 
-## =� License
+## 单个哈 License
 
 Apache 2.0
 
 ---
 
-## =O Acknowledgments
+## 希值 Acknowledgments
 
 Built for the Hedera Ascension Hackathon 2025. Copyright Ontologic, Open To Suggestions Media.
 Open-sourced. Apache 2.0 license. Because it is better to give than to receive.
