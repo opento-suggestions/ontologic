@@ -3,16 +3,22 @@
 // Uses Hedera SDK for contract execution (required for ContractId supply keys)
 
 import { readFileSync } from "fs";
-import { ethers } from "ethers";
+import { ethers, Interface } from "ethers";
 import {
   Client,
   ContractExecuteTransaction,
-  ContractFunctionParameters,
   ContractId,
 } from "@hashgraph/sdk";
 import { getConfig } from "./lib/config.js";
 import { canonicalize } from "./lib/canonicalize.js";
 import * as logger from "./lib/logger.js";
+
+// ABI fragment for reasonAdd with ProofData struct
+const REASONING_ABI = [
+  "function reasonAdd(address A, address B, bytes32 domainHash, (bytes32 inputsHash, bytes32 proofHash, bytes32 factHash, bytes32 ruleHash, string canonicalUri) p) external returns (address outToken, uint64 amount)"
+];
+
+const iface = new Interface(REASONING_ABI);
 
 function arg(name, d=null){ const i=process.argv.indexOf(name); return i<0?d:process.argv[i+1]; }
 
@@ -112,16 +118,21 @@ const entityNumHex = evmAddrClean.slice(-8);
 const entityNum = parseInt(entityNumHex, 16);
 const contractId = new ContractId(0, 0, entityNum);
 
-// Build contract function parameters
-const params = new ContractFunctionParameters()
-  .addAddress(A)
-  .addAddress(B)
-  .addBytes32(Buffer.from(D_LIGHT.replace("0x", ""), "hex"))
-  .addBytes32(Buffer.from(inputsHash.replace("0x", ""), "hex"))
-  .addBytes32(Buffer.from(kCanon.replace("0x", ""), "hex"))
-  .addBytes32(Buffer.from(factHash.replace("0x", ""), "hex"))
-  .addBytes32(Buffer.from(ruleHash.replace("0x", ""), "hex"))
-  .addString(canonicalUri);
+// Build ProofData struct and encode function call via ethers.Interface
+const proofData = {
+  inputsHash,
+  proofHash: kCanon,
+  factHash,
+  ruleHash,
+  canonicalUri,
+};
+
+const encodedFn = iface.encodeFunctionData("reasonAdd", [
+  A,
+  B,
+  D_LIGHT,
+  proofData,
+]);
 
 // DEBUG: Print all computed values before contract call
 console.log("\n=== DEBUG: Parameters Being Sent to Contract ===");
@@ -139,15 +150,17 @@ console.log("factHash:", factHash);
 console.log("ruleHash:", ruleHash);
 console.log("canonicalUri:", canonicalUri);
 console.log("Contract ID:", contractId.toString());
+console.log("Encoded call data length:", encodedFn.length);
+console.log("Function selector (first 10 chars):", encodedFn.slice(0, 10));
 console.log("=== END DEBUG ===\n");
 
-// Execute contract via SDK
+// Execute contract via SDK with properly encoded struct
 let receipt;
 try {
   const tx = await new ContractExecuteTransaction()
     .setContractId(contractId)
     .setGas(300000)
-    .setFunction("reasonAdd", params)
+    .setFunctionParameters(Buffer.from(encodedFn.slice(2), "hex"))
     .execute(client);
 
   logger.line({ stage:"contract_call", ok:true, action:"submitted", txId: tx.transactionId.toString() });

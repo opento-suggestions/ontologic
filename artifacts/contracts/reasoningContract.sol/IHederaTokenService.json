@@ -1,0 +1,53 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "IHederaTokenService",
+  "sourceName": "contracts/reasoningContract.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "amount",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes[]",
+          "name": "metadata",
+          "type": "bytes[]"
+        }
+      ],
+      "name": "mintToken",
+      "outputs": [
+        {
+          "internalType": "int64",
+          "name": "responseCode",
+          "type": "int64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "newTotalSupply",
+          "type": "uint64"
+        },
+        {
+          "internalType": "int64[]",
+          "name": "serialNumbers",
+          "type": "int64[]"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/reasoningContract.sol",
+  "buildInfoId": "solc-0_8_20-a45e26bb690aba38d3c104506329772bae8a46e3"
+}

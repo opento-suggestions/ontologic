@@ -209,6 +209,18 @@ contract ReasoningContract {
     );
 
     /**
+     * @notice DEBUG: Emitted to trace inputsHash comparison in reasonAdd
+     * @param clientHash InputsHash provided by client
+     * @param contractHash InputsHash computed by contract
+     * @param matches Whether they match
+     */
+    event DebugInputsHash(
+        bytes32 clientHash,
+        bytes32 contractHash,
+        bool matches
+    );
+
+    /**
      * @notice DEBUG: Emitted to trace token pair matching in _mixAddDeterministic
      * @param inputA Original input token A
      * @param inputB Original input token B
@@ -510,11 +522,18 @@ contract ReasoningContract {
         bytes32 domainHash,
         ProofData calldata p
     ) external returns (address outToken, uint64 amount) {
+        // DEBUG: Emit entry point
+        emit DebugInputsHash(domainHash, D_LIGHT, domainHash == D_LIGHT);
+
         // Enforce light domain only for additive reasoning
         require(domainHash == D_LIGHT, "domain must be D_LIGHT");
 
+        // DEBUG: Emit inputsHash comparison before validation
+        bytes32 contractComputed = _inputsHashAdd(A, B, domainHash);
+        emit DebugInputsHash(p.inputsHash, contractComputed, p.inputsHash == contractComputed);
+
         // Validate inputsHash matches computed hash
-        require(p.inputsHash == _inputsHashAdd(A, B, domainHash), "inputsHash-mismatch");
+        require(p.inputsHash == contractComputed, "inputsHash-mismatch");
 
         // Check for replay
         if (proofSeen[p.proofHash]) {
