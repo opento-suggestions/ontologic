@@ -1,12 +1,12 @@
 // scripts/entity-v06.js
-// Entity-level attestation executor (Floridi Layer - v0.6 DRAFT)
+// Entity-level attestation executor (Floridi Layer - v0.6)
 // Usage: node scripts/entity-v06.js <entity-bundle-path>
-// Example: node scripts/entity-v06.js examples/mvp/entity-purple.json
+// Example: node scripts/entity-v06.js examples/mvp/entity-white-light.json
 
 /**
- * v0.6 Entity Attestation Flow (PREPARATION DRAFT)
+ * v0.6 Entity Attestation Flow
  *
- * This script demonstrates the Floridi layer execution planned for v0.6.
+ * This script implements the Floridi layer execution for entity-level attestation.
  * It consumes evidence from previous reasoning proofs and produces a domain verdict.
  *
  * Architecture:
@@ -14,17 +14,14 @@
  * 2. Build canonical manifest JSON
  * 3. Compute manifestHash = keccak256(canonical)
  * 4. Post manifest to HCS (Floridi consensus plane)
- * 5. Call publishEntity(token, manifestHash, manifestUri) [REQUIRES v0.6 CONTRACT]
+ * 5. Call publishEntity(token, manifestHash, manifestUri)
  * 6. Emit ProofEntity event
  * 7. Mint verdict token (WHITE for color.entity.light, BLACK for color.entity.paint)
  *
  * Domain Verdict Logic (Rules Within Rules):
- * - LIGHT domain: If all evidence proofs are valid → YES → WHITE
- * - PAINT domain: If all evidence proofs are valid → YES → BLACK
+ * - LIGHT domain: Evidence references CMY proofs → YES → WHITE
+ * - PAINT domain: Evidence references CMY proofs → YES → BLACK
  * - Invalid evidence → NO → revert
- *
- * NOTE: This script will FAIL on v0.5.2 contract (publishEntity function not yet deployed).
- *       This is a PREPARATION artifact for v0.6 implementation.
  */
 
 import { readFileSync } from "fs";
@@ -243,8 +240,7 @@ try {
 
 } catch (e) {
   logger.line({ stage: "contract_call", ok: false, error: String(e) });
-  logger.error("\n⚠️  EXPECTED FAILURE: publishEntity function requires v0.6 contract deployment");
-  logger.error("This script is a PREPARATION DRAFT for v0.6 - not yet operational on v0.5.2");
+  logger.error("\n⚠️  Entity attestation failed");
   logger.error("\nContract error details:");
   logger.error(String(e));
   process.exit(3);
