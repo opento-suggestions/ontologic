@@ -1,6 +1,69 @@
 Ontologic – Proof-of-Reasoning Demo (v0.6.3)
 
 Hedera Ascension Hackathon — Final Judge Reference (2025-11-15)
+📦 How to Reproduce the Demo (v0.6.3)
+
+After cloning:
+
+cp .env.example .env
+npm install
+
+1. Run the three LIGHT additive proofs
+
+(Generates new proofHash_v1 values)
+
+node scripts/reason.js examples/mvp/red-green-yellow.json
+node scripts/reason.js examples/mvp/green-blue-cyan.json
+node scripts/reason.js examples/mvp/red-blue-magenta.json
+
+
+This step produces your canonical proofs.
+You may optionally paste these into the entity bundle for a fully self-generated run.
+
+2. Run the entity attestation (WHITE)
+
+Posts manifest → calls publishEntity → mints verdict token.
+
+node scripts/entity-v06.js examples/mvp/entity-white-light.json
+
+
+This works as-is using the frozen canonical proofs,
+or with your freshly generated proofHash_v1 values if you inserted them.
+
+3. Validate system health
+
+Read-only validation of registry, rule IDs, and historical proofs.
+
+node scripts/validate-light-e2e-v063.js
+
+🧬 The Morpheme (Core Technical Punchline)
+
+Each proof produces a single hash:
+
+proofHash = keccak256({
+  ruleHash,
+  inputsHash,
+  factHash,
+  canonicalUri
+})
+
+
+This merges rule → inputs → outputs → meaning into one final cryptographic artifact.
+
+It is:
+
+deterministic
+
+replayable
+
+independently verifiable
+
+universal across domains
+
+This is what we mean when we say:
+
+Ontologic is TCP/IP for reasoning provenance.
+One morpheme = one verifiable unit of reasoning.
 
 ✅ What Ontologic Demonstrates
 
@@ -28,7 +91,7 @@ https://hashscan.io/testnet/topic/0.0.7239064
 
 Everything you see in the demo video and examples happens on this live contract.
 
-🎨 Token System (HTS)
+🎨 Demo Token System (HTS)
 RGB (axioms)
 
 RED — 0.0.7247682
@@ -76,52 +139,7 @@ proofHash = keccak256(manifest)
 
 All three layers share the same proofHash.
 
-📦 How to Reproduce the Demo
 
-After cloning:
-
-cp .env.example .env
-npm install
-
-Run the three additive proofs:
-node scripts/reason.js examples/mvp/red-green-yellow.json
-node scripts/reason.js examples/mvp/green-blue-cyan.json
-node scripts/reason.js examples/mvp/red-blue-magenta.json
-
-Run the entity attestation (WHITE):
-node scripts/entity-v06.js examples/mvp/entity-white-light.json
-
-Validate system health:
-node scripts/validate-light-e2e-v063.js
-
-🧬 The Morpheme (Core Technical Punchline)
-
-Each proof produces a single hash:
-
-proofHash = keccak256({
-  ruleHash,
-  inputsHash,
-  factHash,
-  canonicalUri
-})
-
-
-This merges rule → inputs → outputs → meaning into one final cryptographic artifact.
-
-It is:
-
-deterministic
-
-replayable
-
-independently verifiable
-
-universal across domains
-
-This is what we mean when we say:
-
-Ontologic is TCP/IP for reasoning provenance.
-One morpheme = one verifiable unit of reasoning.
 
 🧪 Canonical Proofs (Used in Demo Video)
 RED + GREEN → YELLOW
