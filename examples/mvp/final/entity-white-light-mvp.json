@@ -1,0 +1,73 @@
+{
+  "v": "0.6.3",
+  "nsid": "color.entity.WHITE.light@v1",
+  "layer": "floridi",
+  "mode": "entity",
+  "domain": "color.entity.light",
+  "operator": "attest_palette@v1",
+
+  "evidence": [
+    {
+      "proofHash": "0x40a5c716037b72e6fa3f1aeab9c7006cd922cd6a70533a66b46b50556a320bc1",
+      "canonicalUri": "hcs://0.0.7239064/1763317707.661468204",
+      "hcsSeq": "52",
+      "inputs": [
+        { "symbol": "RED",   "token": "0x00000000000000000000000000000000006e9742" },
+        { "symbol": "GREEN", "token": "0x00000000000000000000000000000000006e9743" }
+      ],
+      "output": {
+        "symbol": "YELLOW",
+        "token":  "0x00000000000000000000000000000000006e9799"
+      }
+    },
+    {
+      "proofHash": "0xcadae0ef29d8126988c6510908e1c715bf9b780f3383e2e32116b2c5f8cb2d74",
+      "canonicalUri": "hcs://0.0.7239064/1763317729.754028000",
+      "hcsSeq": "53",
+      "inputs": [
+        { "symbol": "GREEN", "token": "0x00000000000000000000000000000000006e9743" },
+        { "symbol": "BLUE",  "token": "0x00000000000000000000000000000000006e9744" }
+      ],
+      "output": {
+        "symbol": "CYAN",
+        "token":  "0x00000000000000000000000000000000006e97a2"
+      }
+    },
+    {
+      "proofHash": "0x0c17d59c24558d2172270ffc5a94f2debc9a459f2f9e2468757ba6e4bfc24499",
+      "canonicalUri": "hcs://0.0.7239064/1763317743.856638000",
+      "hcsSeq": "54",
+      "inputs": [
+        { "symbol": "RED",  "token": "0x00000000000000000000000000000000006e9742" },
+        { "symbol": "BLUE", "token": "0x00000000000000000000000000000000006e9744" }
+      ],
+      "output": {
+        "symbol": "MAGENTA",
+        "token":  "0x00000000000000000000000000000000006e97a6"
+      }
+    }
+  ],
+
+  "output": {
+    "token":   "0x00000000000000000000000000000000006ecd4a",
+    "symbol":  "WHITE",
+    "verdict": "0x00000000000000000000000000000000006ecd4a",
+    "amount":  "1"
+  },
+
+  "description": "Entity attestation for WHITE (light domain). Evidence: additive RGB proofs (RED+GREEN→YELLOW, GREEN+BLUE→CYAN, RED+BLUE→MAGENTA) compressed into a single WHITE manifest.",
+
+  "rule": {
+    "contract": "0x00000000000000000000000000000000006ecc8a",
+    "version": "v0.6.3"
+  },
+
+  "signers": [
+    "0x00000000000000000000000000000000006e73ab"
+  ],
+
+  "notes": {
+    "verdict_logic": "LIGHT entity domain: if all three CMY proofs are present and valid, mint exactly 1 WHITE.",
+    "manifest_purpose": "Public Floridi-layer record binding the WHITE token to the complete RGB→WHITE proof tree for the LIGHT domain."
+  }
+}
