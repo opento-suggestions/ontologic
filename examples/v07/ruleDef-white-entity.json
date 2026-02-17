@@ -1,0 +1,37 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/entity/white-from-cmy",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.entity.light",
+  "operator": "attest_palette@v1",
+  "inputs": [
+    {
+      "label": "evidence",
+      "description": "References to CMY proof hashes",
+      "schema": "array<proofHash>",
+      "required": ["YELLOW_proof", "CYAN_proof", "MAGENTA_proof"]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "WHITE",
+    "tokenId": "0.0.7261514",
+    "tokenAddr": "0x00000000000000000000000000000000006ecd4a",
+    "amount": "1",
+    "verdict": "APPROVED"
+  },
+  "relation": "YELLOW+CYAN+MAGENTA->WHITE",
+  "description": "Entity attestation: WHITE verdict when all CMY proofs present (light domain)",
+  "evidenceRequirements": {
+    "minProofs": 3,
+    "requiredOutputs": [
+      { "tokenSymbol": "YELLOW", "tokenAddr": "0x00000000000000000000000000000000006e9799" },
+      { "tokenSymbol": "CYAN", "tokenAddr": "0x00000000000000000000000000000000006e97a2" },
+      { "tokenSymbol": "MAGENTA", "tokenAddr": "0x00000000000000000000000000000000006e97a6" }
+    ]
+  },
+  "engineType": "evm",
+  "functionSelector": "0x...",
+  "engineCodeHash": "0xd35199bebcddccd1e150e9140fcb1842295616dd249d63a0be6cc66ea75a48fd"
+}
