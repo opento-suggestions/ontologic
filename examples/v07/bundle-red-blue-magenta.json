@@ -1,0 +1,25 @@
+{
+  "ruleRef": "sphere://demo/light/red-blue-magenta",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "RED",
+      "tokenId": "0.0.7247682",
+      "tokenAddr": "0x00000000000000000000000000000000006e9742",
+      "amount": "1"
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "BLUE",
+      "tokenId": "0.0.7247684",
+      "tokenAddr": "0x00000000000000000000000000000000006e9744",
+      "amount": "1"
+    }
+  ],
+  "output": {
+    "tokenSymbol": "MAGENTA",
+    "tokenId": "0.0.7247782",
+    "tokenAddr": "0x00000000000000000000000000000000006e97a6",
+    "amount": 1
+  }
+}

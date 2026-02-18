@@ -25,8 +25,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ethers } from "ethers";
-import { getOperatorConfig } from "../lib/config.js";
-import { canonicalizeJSON } from "../lib/canonicalize.js";
+import { getOperatorConfig } from "../v0.6.3/lib/config.js";
+import { canonicalizeJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig } from "./lib/sphere-config.js";
 import { buildHcsUri, computeRuleUriHash } from "./lib/resolve.js";
 

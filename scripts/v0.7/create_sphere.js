@@ -24,12 +24,16 @@ import {
   PrivateKey,
   TopicCreateTransaction,
   ContractCreateFlow,
+  ContractFunctionParameters,
+  ContractInfoQuery,
+  ContractExecuteTransaction,
+  ContractId,
   Hbar
 } from "@hashgraph/sdk";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { getOperatorConfig, getNetworkConfig } from "../lib/config.js";
+import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { createSphereConfig, loadSphereConfig, updateSphereConfig } from "./lib/sphere-config.js";
 import { ethers } from "ethers";
 
@@ -117,30 +121,40 @@ async function deployContract(client, sphereName) {
   const schemaHash = ethers.keccak256(ethers.toUtf8Bytes("ontologic:v0.7:reasoning"));
 
   console.log("  Deploying contract...");
-  const contractTx = await new ContractCreateFlow()
-    .setBytecode(bytecode)
-    .setGas(300000)
-    .setConstructorParameters(
-      new (await import("@hashgraph/sdk")).ContractFunctionParameters().addBytes32(
-        Buffer.from(schemaHash.slice(2), "hex")
-      )
-    )
-    .setMaxTransactionFee(new Hbar(20))
-    .execute(client);
 
+  // Build the flow instance first (setConstructorParameters is not chainable)
+  const contractCreateFlow = new ContractCreateFlow()
+    .setBytecode(bytecode)
+    .setGas(4_000_000);
+
+  // Add constructor parameter (schema hash as bytes32)
+  contractCreateFlow.setConstructorParameters(
+    new ContractFunctionParameters().addBytes32(
+      Buffer.from(schemaHash.slice(2), "hex")
+    )
+  );
+
+  // Set max tx fee if supported
+  if (typeof contractCreateFlow.setMaxTransactionFee === "function") {
+    contractCreateFlow.setMaxTransactionFee(new Hbar(20));
+  }
+
+  const contractTx = await contractCreateFlow.execute(client);
   const contractReceipt = await contractTx.getReceipt(client);
   const contractId = contractReceipt.contractId.toString();
 
-  // Get EVM address
-  const contractInfo = await (await import("@hashgraph/sdk")).ContractInfoQuery
-    .setContractId(contractReceipt.contractId)
-    .execute(client);
-  const contractAddr = `0x${contractInfo.contractAccountId.toSolidityAddress()}`;
+// Get EVM address
+const contractInfo = await new ContractInfoQuery()
+  .setContractId(contractReceipt.contractId)
+  .execute(client);
 
-  console.log(`  Contract ID: ${contractId}`);
-  console.log(`  Contract Address: ${contractAddr}`);
+// In @hashgraph/sdk v2.x, this is already an EVM-compatible address string
+const contractAddr = contractInfo.contractAccountId;
 
-  return { contractId, contractAddr, codeHash };
+console.log(`  Contract ID:      ${contractId}`);
+console.log(`  Contract Address: ${contractAddr}`);
+
+return { contractId, contractAddr, codeHash };
 }
 
 /**
@@ -149,14 +163,12 @@ async function deployContract(client, sphereName) {
  * @param {string} contractId - Contract ID
  * @param {Object} config - Sphere configuration
  */
-async function configureContract(client, contractId, config) {
+async function configureContract(client, contractIdStr, config) {
   console.log("\nConfiguring contract with sphere topics...");
 
-  const { ContractExecuteTransaction, ContractFunctionParameters, ContractId } = await import("@hashgraph/sdk");
-
   const tx = await new ContractExecuteTransaction()
-    .setContractId(ContractId.fromString(contractId))
-    .setGas(100000)
+    .setContractId(ContractId.fromString(contractIdStr))
+    .setGas(500_000)
     .setFunction(
       "configureSphere",
       new ContractFunctionParameters()

@@ -11,8 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from project root
-// Now uses .env (copy of .env.example) for standard dotenv compatibility
-dotenv.config({ path: path.join(__dirname, "..", "..", ".env"), override: true });
+// Path: v0.6.3/lib/ -> v0.6.3/ -> scripts/ -> ontologic/ (project root with .env)
+dotenv.config({ path: path.join(__dirname, "..", "..", "..", ".env"), override: true });
 
 /**
  * Validates that required environment variables are present

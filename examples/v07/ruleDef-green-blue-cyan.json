@@ -30,5 +30,5 @@
   "description": "Additive color mixing: GREEN + BLUE = CYAN (light domain)",
   "engineType": "evm",
   "functionSelector": "0xc687cfeb",
-  "engineCodeHash": "0xd35199bebcddccd1e150e9140fcb1842295616dd249d63a0be6cc66ea75a48fd"
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
 }

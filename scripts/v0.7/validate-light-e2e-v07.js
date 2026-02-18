@@ -30,7 +30,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ethers, Interface } from "ethers";
-import { getOperatorConfig, getNetworkConfig } from "../lib/config.js";
+import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { loadSphereConfig, requireContract } from "./lib/sphere-config.js";
 import { resolveRule, resolveLatestRule, resolveRuleDef, computeRuleUriHash } from "./lib/resolve.js";
 

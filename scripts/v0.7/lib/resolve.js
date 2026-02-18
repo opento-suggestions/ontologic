@@ -8,8 +8,8 @@
  */
 
 import { ethers } from "ethers";
-import { canonicalizeJSON } from "../../lib/canonicalize.js";
-import { getNetworkConfig } from "../../lib/config.js";
+import { canonicalizeJSON } from "../../v0.6.3/lib/canonicalize.js";
+import { getNetworkConfig } from "../../v0.6.3/lib/config.js";
 
 /**
  * Parse an HCS URI into its components

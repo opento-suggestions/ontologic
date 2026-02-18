@@ -35,8 +35,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ethers } from "ethers";
-import { getOperatorConfig } from "../lib/config.js";
-import { canonicalizeJSON, hashCanonicalJSON } from "../lib/canonicalize.js";
+import { getOperatorConfig } from "../v0.6.3/lib/config.js";
+import { canonicalizeJSON, hashCanonicalJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig, requireContract } from "./lib/sphere-config.js";
 import { resolveRule, computeRuleUriHash } from "./lib/resolve.js";
 
@@ -171,15 +171,22 @@ async function main() {
   const args = process.argv.slice(2);
 
   // Parse arguments
-  const bundlePath = args.find((a) => !a.startsWith("--") && a !== args[args.indexOf("--rule") + 1] && a !== args[args.indexOf("--sphere") + 1]);
-
-  const getArg = (flag) => {
+  const getArgValue = (flag) => {
     const idx = args.indexOf(flag);
     return idx !== -1 && idx + 1 < args.length ? args[idx + 1] : null;
   };
 
-  const ruleRef = getArg("--rule");
-  const sphereName = getArg("--sphere") || "demo";
+  const ruleArgValue = getArgValue("--rule");
+  const sphereArgValue = getArgValue("--sphere");
+
+  const bundlePath = args.find((a) =>
+    !a.startsWith("--") &&
+    a !== ruleArgValue &&
+    a !== sphereArgValue
+  );
+
+  const ruleRef = ruleArgValue;
+  const sphereName = sphereArgValue || "demo";
   const noMint = args.includes("--no-mint");
   const noPrepare = args.includes("--no-prepare");
   const dryRun = args.includes("--dry-run");
