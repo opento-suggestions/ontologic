@@ -1,0 +1,34 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/light/red-green-yellow",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.light",
+  "operator": "mix_add@v1",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "RED",
+      "tokenId": "0.0.7247682",
+      "tokenAddr": "0x00000000000000000000000000000000006e9742"
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "GREEN",
+      "tokenId": "0.0.7247683",
+      "tokenAddr": "0x00000000000000000000000000000000006e9743"
+    }
+  ],
+  "output": {
+    "tokenSymbol": "YELLOW",
+    "tokenId": "0.0.7247769",
+    "tokenAddr": "0x00000000000000000000000000000000006e9799",
+    "amount": "1"
+  },
+  "relation": "A+B->C",
+  "description": "Additive color mixing: RED + GREEN = YELLOW (light domain)",
+  "engineType": "evm",
+  "functionSelector": "0xc687cfeb",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

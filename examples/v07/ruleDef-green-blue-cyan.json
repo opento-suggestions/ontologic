@@ -1,0 +1,34 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/light/green-blue-cyan",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.light",
+  "operator": "mix_add@v1",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "GREEN",
+      "tokenId": "0.0.7247683",
+      "tokenAddr": "0x00000000000000000000000000000000006e9743"
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "BLUE",
+      "tokenId": "0.0.7247684",
+      "tokenAddr": "0x00000000000000000000000000000000006e9744"
+    }
+  ],
+  "output": {
+    "tokenSymbol": "CYAN",
+    "tokenId": "0.0.7247778",
+    "tokenAddr": "0x00000000000000000000000000000000006e97a2",
+    "amount": "1"
+  },
+  "relation": "A+B->C",
+  "description": "Additive color mixing: GREEN + BLUE = CYAN (light domain)",
+  "engineType": "evm",
+  "functionSelector": "0xc687cfeb",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

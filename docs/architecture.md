@@ -18,7 +18,7 @@ Ontologic is a proof-of-reasoning toolkit for Hedera that implements a **three-l
 
 ## Key Innovations
 
-### v0.6.3 (Current - Hackathon Demo)
+### v0.6.3 (Ascension Hackathon Demo)
 - **Complete Triune Architecture**: Peirce (additive) + Tarski (subtractive) + Floridi (entity attestation)
 - **publishEntityV2**: Explicit evidence validation for entity proofs
 - **Rule Registry Infrastructure**: Built but deferred to v0.7.0+ (hardcoded execution remains authoritative)
