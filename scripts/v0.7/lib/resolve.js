@@ -80,8 +80,43 @@ export async function resolveRuleDef(ruleUri, options = {}) {
     throw new Error(`RuleDef not found at ${ruleUri}`);
   }
 
-  // 3. Decode message body (base64 → UTF-8 → JSON)
-  const messageBody = Buffer.from(data.messages[0].message, "base64").toString("utf8");
+  // 3. Handle chunked messages (HCS splits large messages)
+  const firstMsg = data.messages[0];
+  let messageBody;
+
+  if (firstMsg.chunk_info && firstMsg.chunk_info.total > 1) {
+    // Message is chunked - need to fetch and reassemble all chunks
+    const totalChunks = firstMsg.chunk_info.total;
+    const initialTxId = firstMsg.chunk_info.initial_transaction_id;
+
+    // Query for all messages with same initial_transaction_id
+    const seqNum = firstMsg.sequence_number;
+    const chunksUrl = `${mirrorNodeUrl}/topics/${topicId}/messages?sequencenumber=gte:${seqNum}&limit=${totalChunks + 1}`;
+
+    const chunksResponse = await fetch(chunksUrl);
+    const chunksData = await chunksResponse.json();
+
+    // Filter and sort chunks by chunk number
+    const chunks = chunksData.messages
+      .filter(m => m.chunk_info &&
+        m.chunk_info.initial_transaction_id.transaction_valid_start ===
+        initialTxId.transaction_valid_start)
+      .sort((a, b) => a.chunk_info.number - b.chunk_info.number);
+
+    if (chunks.length !== totalChunks) {
+      throw new Error(`Expected ${totalChunks} chunks, found ${chunks.length}`);
+    }
+
+    // Reassemble message from chunks
+    const reassembled = chunks
+      .map(c => Buffer.from(c.message, "base64").toString("utf8"))
+      .join("");
+
+    messageBody = reassembled;
+  } else {
+    // Single message, no chunking
+    messageBody = Buffer.from(firstMsg.message, "base64").toString("utf8");
+  }
 
   // 4. Parse as RuleDef
   let ruleDef;

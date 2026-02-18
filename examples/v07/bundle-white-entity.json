@@ -1,0 +1,34 @@
+{
+  "ruleRef": "sphere://demo/entity/white-from-cmy",
+  "inputs": [
+    {
+      "label": "evidence",
+      "proofs": [
+        {
+          "ruleId": "sphere://demo/light/red-green-yellow",
+          "bindingHash": "0xa43b8ff045fbf7d54dd3780e780556a66de70bb4e5cf13dadab639312fc9832b",
+          "outputToken": "YELLOW",
+          "hcsSeq": 2
+        },
+        {
+          "ruleId": "sphere://demo/light/green-blue-cyan",
+          "bindingHash": "0x116b11bafeb6135a6abcbe5a10c6596e577fb7ef1c0cf9c4529e07159eb888a0",
+          "outputToken": "CYAN",
+          "hcsSeq": 3
+        },
+        {
+          "ruleId": "sphere://demo/light/red-blue-magenta",
+          "bindingHash": "0xc5fd7fc422b876afdc1fdd9b94810c541d84e76e112f01d78704132356db2192",
+          "outputToken": "MAGENTA",
+          "hcsSeq": 4
+        }
+      ]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "WHITE",
+    "tokenId": "0.0.7261514",
+    "tokenAddr": "0x00000000000000000000000000000000006ecd4a",
+    "amount": 1
+  }
+}
