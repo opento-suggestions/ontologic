@@ -281,7 +281,7 @@ Apache 2.0
 
 ## 希值 Acknowledgments
 
-Built for the Hedera Ascension Hackathon 2025. Copyright Ontologic, Open To Suggestions Media.
+Built for the Hedera Apex Hackathon 2025. Copyright Ontologic Reclamation Group, on behalf of Open To Suggestions Media.
 Open-sourced. Apache 2.0 license. Because it is better to give than to receive.
 
 Uses HTS, HCS, Smart Contracts 2.0, and Hedera's low-latency consensus.
