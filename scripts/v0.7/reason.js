@@ -280,7 +280,7 @@ async function main() {
 
   // Initialize client
   const operatorConfig = getOperatorConfig();
-  const privateKey = PrivateKey.fromStringDer(operatorConfig.derKey);
+  const privateKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   try {

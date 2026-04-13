@@ -6,29 +6,29 @@
       "proofs": [
         {
           "ruleId": "sphere://demo/light/red-green-yellow",
-          "bindingHash": "0xa43b8ff045fbf7d54dd3780e780556a66de70bb4e5cf13dadab639312fc9832b",
+          "bindingHash": null,
           "outputToken": "YELLOW",
-          "hcsSeq": 2
+          "hcsSeq": null
         },
         {
           "ruleId": "sphere://demo/light/green-blue-cyan",
-          "bindingHash": "0x116b11bafeb6135a6abcbe5a10c6596e577fb7ef1c0cf9c4529e07159eb888a0",
+          "bindingHash": null,
           "outputToken": "CYAN",
-          "hcsSeq": 3
+          "hcsSeq": null
         },
         {
           "ruleId": "sphere://demo/light/red-blue-magenta",
-          "bindingHash": "0xc5fd7fc422b876afdc1fdd9b94810c541d84e76e112f01d78704132356db2192",
+          "bindingHash": null,
           "outputToken": "MAGENTA",
-          "hcsSeq": 4
+          "hcsSeq": null
         }
       ]
     }
   ],
   "output": {
     "tokenSymbol": "WHITE",
-    "tokenId": "0.0.7261514",
-    "tokenAddr": "0x00000000000000000000000000000000006ecd4a",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
     "amount": 1
   }
 }

@@ -1,0 +1,37 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/entity/black-from-rgb",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.entity.paint",
+  "operator": "attest_palette@v1",
+  "inputs": [
+    {
+      "label": "evidence",
+      "description": "References to RGB proof hashes from paint domain mixing",
+      "schema": "array<proofHash>",
+      "required": ["BLUE_proof", "GREEN_proof", "RED_proof"]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "BLACK",
+    "tokenId": "0.0.8641324",
+    "tokenAddr": "0x000000000000000000000000000000000083db2c",
+    "amount": "1",
+    "verdict": "APPROVED"
+  },
+  "relation": "BLUE+GREEN+RED->BLACK",
+  "description": "Entity attestation: BLACK verdict when all RGB proofs present (paint domain)",
+  "evidenceRequirements": {
+    "minProofs": 3,
+    "requiredOutputs": [
+      { "tokenSymbol": "BLUE", "tokenAddr": "0x000000000000000000000000000000000083db24" },
+      { "tokenSymbol": "GREEN", "tokenAddr": "0x000000000000000000000000000000000083db22" },
+      { "tokenSymbol": "RED", "tokenAddr": "0x000000000000000000000000000000000083db20" }
+    ]
+  },
+  "engineType": "evm",
+  "functionSelector": "0x...",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

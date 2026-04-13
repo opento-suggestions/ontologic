@@ -41,7 +41,7 @@ const __dirname = path.dirname(__filename);
  * @param {PrivateKey} submitKey - Key for topic submission
  * @returns {Promise<{ruleUri: string, consensusTimestamp: string, sequenceNumber: string}>}
  */
-async function submitRuleDef(client, topicId, ruleDef, submitKey) {
+export async function submitRuleDef(client, topicId, ruleDef, submitKey) {
   // Canonicalize the RuleDef (without ruleUri/hashes which we don't know yet)
   const preSubmit = { ...ruleDef };
   delete preSubmit.ruleUri;
@@ -79,7 +79,7 @@ async function submitRuleDef(client, topicId, ruleDef, submitKey) {
  * @param {PrivateKey} submitKey - Key for topic submission
  * @returns {Promise<{sequenceNumber: string}>}
  */
-async function createRegistryEntry(client, config, ruleDef, ruleUri, submitKey) {
+export async function createRegistryEntry(client, config, ruleDef, ruleUri, submitKey) {
   const ruleUriHash = computeRuleUriHash(ruleUri);
 
   const entry = {
@@ -175,7 +175,7 @@ async function main() {
 
   // Initialize client
   const operatorConfig = getOperatorConfig();
-  const privateKey = PrivateKey.fromStringDer(operatorConfig.derKey);
+  const privateKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   try {
@@ -239,7 +239,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("\nError:", err.message);
-  process.exit(1);
-});
+// Only run main() when executed directly, not when imported
+const isDirectRun = process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("\nError:", err.message);
+    process.exit(1);
+  });
+}

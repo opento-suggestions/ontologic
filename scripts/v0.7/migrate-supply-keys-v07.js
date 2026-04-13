@@ -90,7 +90,7 @@ async function main() {
   console.log("!".repeat(60));
 
   // Initialize client
-  const privateKey = PrivateKey.fromStringDer(operatorConfig.derKey);
+  const privateKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   const contractId = ContractId.fromString(sphereConfig.contractId);

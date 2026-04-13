@@ -16,8 +16,8 @@
   ],
   "output": {
     "tokenSymbol": "WHITE",
-    "tokenId": "0.0.7261514",
-    "tokenAddr": "0x00000000000000000000000000000000006ecd4a",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
     "amount": "1",
     "verdict": "APPROVED"
   },
@@ -26,9 +26,9 @@
   "evidenceRequirements": {
     "minProofs": 3,
     "requiredOutputs": [
-      { "tokenSymbol": "YELLOW", "tokenAddr": "0x00000000000000000000000000000000006e9799" },
-      { "tokenSymbol": "CYAN", "tokenAddr": "0x00000000000000000000000000000000006e97a2" },
-      { "tokenSymbol": "MAGENTA", "tokenAddr": "0x00000000000000000000000000000000006e97a6" }
+      { "tokenSymbol": "YELLOW", "tokenAddr": "0x000000000000000000000000000000000083db26" },
+      { "tokenSymbol": "CYAN", "tokenAddr": "0x000000000000000000000000000000000083db28" },
+      { "tokenSymbol": "MAGENTA", "tokenAddr": "0x000000000000000000000000000000000083db2a" }
     ]
   },
   "engineType": "evm",
