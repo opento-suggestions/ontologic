@@ -35,10 +35,11 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { ethers } from "ethers";
-import { getOperatorConfig } from "../v0.6.3/lib/config.js";
+import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { canonicalizeJSON, hashCanonicalJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig, requireContract } from "./lib/sphere-config.js";
-import { resolveRule, computeRuleUriHash } from "./lib/resolve.js";
+import { resolveRule, computeRuleUriHash, buildHcsUri, resolveEvidence } from "./lib/resolve.js";
+import { fetchProvenanceState, buildProvenanceEntry, stampProvenance } from "../v0.7.1/lib/metadata.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,10 +56,11 @@ const V07_ABI = [
  * @param {Object} params - Proof parameters
  * @returns {Object} MorphemeProof object
  */
-function buildMorphemeProof(params) {
+export function buildMorphemeProof(params) {
   return {
     schema: "hcs.ontologic.morphemeProof",
-    schemaVersion: "0.7",
+    schemaVersion: "0.8",
+    proofMode: "contract",
     ruleId: params.ruleId,
     ruleUri: params.ruleUri,
     ruleUriHash: params.ruleUriHash,
@@ -77,7 +79,7 @@ function buildMorphemeProof(params) {
 /**
  * Call prepareReasoning on contract
  */
-async function callPrepareReasoning(client, contractId, ruleUri, ruleUriHash, inputsHash) {
+export async function callPrepareReasoning(client, contractId, ruleUri, ruleUriHash, inputsHash) {
   const iface = new Interface(V07_ABI);
   const data = iface.encodeFunctionData("prepareReasoning", [ruleUri, ruleUriHash, inputsHash]);
 
@@ -117,7 +119,7 @@ async function callReason(client, contractId, params) {
 /**
  * Call reasonWithMint on contract
  */
-async function callReasonWithMint(client, contractId, params) {
+export async function callReasonWithMint(client, contractId, params) {
   const iface = new Interface(V07_ABI);
   const data = iface.encodeFunctionData("reasonWithMint", [
     params.ruleUri,
@@ -142,7 +144,7 @@ async function callReasonWithMint(client, contractId, params) {
 /**
  * Submit MorphemeProof to HCS
  */
-async function submitProof(client, topicId, proof, submitKey) {
+export async function submitProof(client, topicId, proof, submitKey) {
   const canonical = canonicalizeJSON(proof);
 
   const submitTx = await new TopicMessageSubmitTransaction()
@@ -222,6 +224,15 @@ async function main() {
   requireContract(config);
   console.log(`\nContract: ${config.contractId}`);
 
+  // Auto-resolve evidence if bundle has null bindingHash fields (entity bundles)
+  if (bundle.inputs?.[0]?.proofs?.some(p => p.bindingHash === null)) {
+    console.log("\nAuto-resolving evidence from PROOF_TOPIC...");
+    await resolveEvidence(bundle, config.proofTopicId);
+    for (const p of bundle.inputs[0].proofs) {
+      console.log(`  ${p.ruleId} → bindingHash=${p.bindingHash.slice(0, 18)}..., hcsSeq=${p.hcsSeq}`);
+    }
+  }
+
   // Resolve rule
   const effectiveRuleRef = ruleRef || bundle.ruleRef || bundle.ruleId;
   if (!effectiveRuleRef) {
@@ -280,7 +291,7 @@ async function main() {
 
   // Initialize client
   const operatorConfig = getOperatorConfig();
-  const privateKey = PrivateKey.fromStringDer(operatorConfig.derKey);
+  const privateKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   try {
@@ -348,6 +359,37 @@ async function main() {
     console.log(`   Consensus Timestamp: ${proofResult.consensusTimestamp}`);
     console.log(`   Proof Hash: ${proofResult.proofHash}`);
 
+    // Step 4: Metadata stamp (Tarski via alteration — universal, both proof modes)
+    // Hard invariant: HCS anchor landed above, metadata stamp follows
+    console.log(`\n4. Stamping ${bundle.output.tokenSymbol} metadata...`);
+    try {
+      const networkConfig = getNetworkConfig();
+      const proofUri = buildHcsUri(config.proofTopicId, proofResult.consensusTimestamp);
+
+      const state = await fetchProvenanceState(
+        networkConfig.mirrorNodeUrl,
+        bundle.output.tokenId
+      );
+
+      const entry = buildProvenanceEntry({
+        bindingHash,
+        domain: ruleDef.domain,
+        ruleId: ruleDef.ruleId,
+        proofUri,
+        proofMode: "contract",
+      });
+
+      const stampResult = await stampProvenance(
+        client, bundle.output.tokenId, state, entry, privateKey
+      );
+
+      console.log(`   Metadata stamp: ${stampResult.status}`);
+      console.log(`   Provenance: n=${stampResult.n}, root=${stampResult.root.slice(0, 18)}...`);
+    } catch (stampErr) {
+      // Proof exists on HCS — stamp can be retried. Do not fail the whole operation.
+      console.warn(`   ⚠️  Metadata stamp failed (proof is safe on HCS): ${stampErr.message}`);
+    }
+
     // Summary
     console.log("\n" + "=".repeat(60));
     console.log("Reasoning Complete");
@@ -366,7 +408,12 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("\nError:", err.message);
-  process.exit(1);
-});
+// Only run main() when executed directly, not when imported
+const isDirectRun = process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("\nError:", err.message);
+    process.exit(1);
+  });
+}

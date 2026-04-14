@@ -1,0 +1,28 @@
+{
+  "ruleRef": "sphere://demo/paint/magenta-yellow-red",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "MAGENTA",
+      "tokenId": "0.0.8641322",
+      "tokenAddr": "0x000000000000000000000000000000000083db2a",
+      "amount": "1",
+      "properties": { "cmyk_c": 0, "cmyk_m": 100, "cmyk_y": 0, "cmyk_k": 0 }
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "YELLOW",
+      "tokenId": "0.0.8641318",
+      "tokenAddr": "0x000000000000000000000000000000000083db26",
+      "amount": "1",
+      "properties": { "cmyk_c": 0, "cmyk_m": 0, "cmyk_y": 100, "cmyk_k": 0 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "RED",
+    "tokenId": "0.0.8641312",
+    "tokenAddr": "0x000000000000000000000000000000000083db20",
+    "amount": 1,
+    "properties": { "cmyk_c": 0, "cmyk_m": 100, "cmyk_y": 100, "cmyk_k": 0 }
+  }
+}

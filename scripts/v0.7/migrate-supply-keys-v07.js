@@ -32,7 +32,15 @@ const TOKENS_TO_MIGRATE = [
   { symbol: "MAGENTA", idEnv: "MAGENTA_TOKEN_ID" },
   { symbol: "WHITE", idEnv: "WHITE_TOKEN_ID" },
   { symbol: "BLACK", idEnv: "BLACK_TOKEN_ID" },
-  { symbol: "PURPLE", idEnv: "PURPLE_TOKEN_ID" }
+  // PURPLE removed — not part of RGB+CMYK colorimetry scope
+  // Colorimetry expansion (Suresh & Jain, 2015)
+  { symbol: "ORANGE", idEnv: "ORANGE_TOKEN_ID" },
+  { symbol: "CHARTREUSE", idEnv: "CHARTREUSE_TOKEN_ID" },
+  { symbol: "SPRING_GRN", idEnv: "SPRING_GRN_TOKEN_ID" },
+  { symbol: "AZURE", idEnv: "AZURE_TOKEN_ID" },
+  { symbol: "VIOLET", idEnv: "VIOLET_TOKEN_ID" },
+  { symbol: "ROSE", idEnv: "ROSE_TOKEN_ID" },
+  { symbol: "KEY", idEnv: "KEY_TOKEN_ID" },
 ];
 
 async function main() {
@@ -90,7 +98,7 @@ async function main() {
   console.log("!".repeat(60));
 
   // Initialize client
-  const privateKey = PrivateKey.fromStringDer(operatorConfig.derKey);
+  const privateKey = PrivateKey.fromString(operatorConfig.derKey);
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   const contractId = ContractId.fromString(sphereConfig.contractId);

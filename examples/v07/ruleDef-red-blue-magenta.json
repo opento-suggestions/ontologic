@@ -2,28 +2,36 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/light/red-blue-magenta",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "mix_add@v1",
   "inputs": [
     {
       "label": "A",
       "tokenSymbol": "RED",
-      "tokenId": "0.0.7247682",
-      "tokenAddr": "0x00000000000000000000000000000000006e9742"
+      "tokenId": "0.0.8641312",
+      "tokenAddr": "0x000000000000000000000000000000000083db20"
     },
     {
       "label": "B",
       "tokenSymbol": "BLUE",
-      "tokenId": "0.0.7247684",
-      "tokenAddr": "0x00000000000000000000000000000000006e9744"
+      "tokenId": "0.0.8641316",
+      "tokenAddr": "0x000000000000000000000000000000000083db24"
     }
   ],
   "output": {
     "tokenSymbol": "MAGENTA",
-    "tokenId": "0.0.7247782",
-    "tokenAddr": "0x00000000000000000000000000000000006e97a6",
+    "tokenId": "0.0.8641322",
+    "tokenAddr": "0x000000000000000000000000000000000083db2a",
     "amount": "1"
   },
   "relation": "A+B->C",

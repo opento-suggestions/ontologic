@@ -1,0 +1,12 @@
+{
+  "sphereName": "demo",
+  "ruleDefsTopicId": "0.0.7972919",
+  "ruleRegistryTopicId": "0.0.7972920",
+  "proofTopicId": "0.0.7972921",
+  "contractId": "0.0.7972924",
+  "contractAddr": "000000000000000000000000000000000079a83c",
+  "network": "hedera-testnet",
+  "tokens": {},
+  "createdAt": "2026-02-18T17:07:27.841Z",
+  "codeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

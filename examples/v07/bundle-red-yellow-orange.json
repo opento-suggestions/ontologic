@@ -1,0 +1,28 @@
+{
+  "ruleRef": "sphere://demo/light/red-yellow-orange",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "RED",
+      "tokenId": "0.0.8641312",
+      "tokenAddr": "0x000000000000000000000000000000000083db20",
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 0, "rgb_b": 0 }
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "YELLOW",
+      "tokenId": "0.0.8641318",
+      "tokenAddr": "0x000000000000000000000000000000000083db26",
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 255, "rgb_b": 0 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "ORANGE",
+    "tokenId": "0.0.8644146",
+    "tokenAddr": "0x000000000000000000000000000000000083e632",
+    "amount": 1,
+    "properties": { "rgb_r": 255, "rgb_g": 128, "rgb_b": 0 }
+  }
+}

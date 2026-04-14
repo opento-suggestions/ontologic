@@ -1,0 +1,36 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/cmyk/black-to-key",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.cmyk",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.CMYK",
+    "class": "CMYK",
+    "inputsRef": ["RGB"],
+    "outputRef": "CMYK",
+    "relation": "HasCoordinate"
+  },
+  "operator": "transform@v1",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "BLACK",
+      "tokenId": "0.0.8641324",
+      "tokenAddr": "0x000000000000000000000000000000000083db2c"
+    }
+  ],
+  "output": {
+    "tokenSymbol": "KEY",
+    "tokenId": "0.0.8644153",
+    "tokenAddr": "0x000000000000000000000000000000000083e639",
+    "amount": "1"
+  },
+  "relation": "A->A'",
+  "description": "Color space transform: BLACK RGB → CMYK coordinates (Key channel)",
+  "engineType": "evm",
+  "functionSelector": "0xc687cfeb",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

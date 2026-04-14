@@ -2,9 +2,17 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/entity/white-from-cmy",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.entity.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "attest_palette@v1",
   "inputs": [
     {
@@ -16,8 +24,8 @@
   ],
   "output": {
     "tokenSymbol": "WHITE",
-    "tokenId": "0.0.7261514",
-    "tokenAddr": "0x00000000000000000000000000000000006ecd4a",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
     "amount": "1",
     "verdict": "APPROVED"
   },
@@ -26,9 +34,9 @@
   "evidenceRequirements": {
     "minProofs": 3,
     "requiredOutputs": [
-      { "tokenSymbol": "YELLOW", "tokenAddr": "0x00000000000000000000000000000000006e9799" },
-      { "tokenSymbol": "CYAN", "tokenAddr": "0x00000000000000000000000000000000006e97a2" },
-      { "tokenSymbol": "MAGENTA", "tokenAddr": "0x00000000000000000000000000000000006e97a6" }
+      { "tokenSymbol": "YELLOW", "tokenAddr": "0x000000000000000000000000000000000083db26" },
+      { "tokenSymbol": "CYAN", "tokenAddr": "0x000000000000000000000000000000000083db28" },
+      { "tokenSymbol": "MAGENTA", "tokenAddr": "0x000000000000000000000000000000000083db2a" }
     ]
   },
   "engineType": "evm",

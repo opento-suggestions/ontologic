@@ -2,28 +2,36 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/light/green-blue-cyan",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "mix_add@v1",
   "inputs": [
     {
       "label": "A",
       "tokenSymbol": "GREEN",
-      "tokenId": "0.0.7247683",
-      "tokenAddr": "0x00000000000000000000000000000000006e9743"
+      "tokenId": "0.0.8641314",
+      "tokenAddr": "0x000000000000000000000000000000000083db22"
     },
     {
       "label": "B",
       "tokenSymbol": "BLUE",
-      "tokenId": "0.0.7247684",
-      "tokenAddr": "0x00000000000000000000000000000000006e9744"
+      "tokenId": "0.0.8641316",
+      "tokenAddr": "0x000000000000000000000000000000000083db24"
     }
   ],
   "output": {
     "tokenSymbol": "CYAN",
-    "tokenId": "0.0.7247778",
-    "tokenAddr": "0x00000000000000000000000000000000006e97a2",
+    "tokenId": "0.0.8641320",
+    "tokenAddr": "0x000000000000000000000000000000000083db28",
     "amount": "1"
   },
   "relation": "A+B->C",

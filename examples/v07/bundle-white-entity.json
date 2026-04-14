@@ -1,0 +1,35 @@
+{
+  "ruleRef": "sphere://demo/entity/white-from-cmy",
+  "inputs": [
+    {
+      "label": "evidence",
+      "proofs": [
+        {
+          "ruleId": "sphere://demo/light/red-green-yellow",
+          "bindingHash": null,
+          "outputToken": "YELLOW",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/light/green-blue-cyan",
+          "bindingHash": null,
+          "outputToken": "CYAN",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/light/red-blue-magenta",
+          "bindingHash": null,
+          "outputToken": "MAGENTA",
+          "hcsSeq": null
+        }
+      ]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "WHITE",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
+    "amount": 1,
+    "properties": { "rgb_r": 255, "rgb_g": 255, "rgb_b": 255 }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "ruleRef": "sphere://demo/cmyk/white-transform",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "WHITE",
+      "tokenId": "0.0.8641323",
+      "tokenAddr": "0x000000000000000000000000000000000083db2b",
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 255, "rgb_b": 255 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "WHITE",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
+    "amount": 1,
+    "properties": { "cmyk_c": 0, "cmyk_m": 0, "cmyk_y": 0, "cmyk_k": 0 }
+  }
+}

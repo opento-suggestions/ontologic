@@ -51,7 +51,3 @@ node scripts/validate-light-e2e-v063.js
 - All 9 tokens created with proper supply keys
 - HCS topic 0.0.7239064 operational
 - Historical proofs (Seq 33-37) available
-
-## Archive
-
-Legacy scripts moved to `archive/v042-v06/`. See `archive/v042-v06/README.md` for details.

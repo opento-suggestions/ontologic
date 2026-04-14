@@ -1,0 +1,20 @@
+{
+  "ruleRef": "sphere://demo/cmyk/blue-transform",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "BLUE",
+      "tokenId": "0.0.8641316",
+      "tokenAddr": "0x000000000000000000000000000000000083db24",
+      "amount": "1",
+      "properties": { "rgb_r": 0, "rgb_g": 0, "rgb_b": 255 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "BLUE",
+    "tokenId": "0.0.8641316",
+    "tokenAddr": "0x000000000000000000000000000000000083db24",
+    "amount": 1,
+    "properties": { "cmyk_c": 100, "cmyk_m": 100, "cmyk_y": 0, "cmyk_k": 0 }
+  }
+}

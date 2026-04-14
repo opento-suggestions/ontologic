@@ -1,0 +1,28 @@
+{
+  "ruleRef": "sphere://demo/light/yellow-green-chartreuse",
+  "inputs": [
+    {
+      "label": "A",
+      "tokenSymbol": "YELLOW",
+      "tokenId": "0.0.8641318",
+      "tokenAddr": "0x000000000000000000000000000000000083db26",
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 255, "rgb_b": 0 }
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "GREEN",
+      "tokenId": "0.0.8641314",
+      "tokenAddr": "0x000000000000000000000000000000000083db22",
+      "amount": "1",
+      "properties": { "rgb_r": 0, "rgb_g": 255, "rgb_b": 0 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "CHARTREUSE",
+    "tokenId": "0.0.8644147",
+    "tokenAddr": "0x000000000000000000000000000000000083e633",
+    "amount": 1,
+    "properties": { "rgb_r": 128, "rgb_g": 255, "rgb_b": 0 }
+  }
+}

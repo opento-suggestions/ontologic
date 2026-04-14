@@ -2,28 +2,36 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/light/red-green-yellow",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "mix_add@v1",
   "inputs": [
     {
       "label": "A",
       "tokenSymbol": "RED",
-      "tokenId": "0.0.7247682",
-      "tokenAddr": "0x00000000000000000000000000000000006e9742"
+      "tokenId": "0.0.8641312",
+      "tokenAddr": "0x000000000000000000000000000000000083db20"
     },
     {
       "label": "B",
       "tokenSymbol": "GREEN",
-      "tokenId": "0.0.7247683",
-      "tokenAddr": "0x00000000000000000000000000000000006e9743"
+      "tokenId": "0.0.8641314",
+      "tokenAddr": "0x000000000000000000000000000000000083db22"
     }
   ],
   "output": {
     "tokenSymbol": "YELLOW",
-    "tokenId": "0.0.7247769",
-    "tokenAddr": "0x00000000000000000000000000000000006e9799",
+    "tokenId": "0.0.8641318",
+    "tokenAddr": "0x000000000000000000000000000000000083db26",
     "amount": "1"
   },
   "relation": "A+B->C",

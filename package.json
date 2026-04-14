@@ -7,7 +7,7 @@
     "deploy": "hardhat run --network hedera scripts/deploy.js"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.72.0",
+    "@hashgraph/sdk": "npm:@hiero-ledger/sdk@^2.82.0",
     "dotenv": "^16.0.0",
     "ethers": "^6.0.0",
     "hardhat": "^3.0.0"

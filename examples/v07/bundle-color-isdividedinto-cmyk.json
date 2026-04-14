@@ -1,0 +1,33 @@
+{
+  "ruleRef": "sphere://demo/ontology/colourmodes-isdividedinto-cmyk",
+  "inputs": [
+    {
+      "label": "evidence",
+      "proofs": [
+        {
+          "ruleId": "sphere://demo/cmyk/cyan-transform",
+          "bindingHash": null,
+          "outputToken": "CYAN",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/cmyk/magenta-transform",
+          "bindingHash": null,
+          "outputToken": "MAGENTA",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/cmyk/yellow-transform",
+          "bindingHash": null,
+          "outputToken": "YELLOW",
+          "hcsSeq": null
+        }
+      ]
+    }
+  ],
+  "output": {
+    "classification": "ColourModes IsDividedInto CMYK",
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "section": "§3.2, Fig. 3 & 5"
+  }
+}
