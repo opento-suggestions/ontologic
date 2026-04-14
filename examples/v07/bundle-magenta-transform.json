@@ -1,0 +1,20 @@
+{
+  "ruleRef": "sphere://demo/cmyk/magenta-transform",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "MAGENTA",
+      "tokenId": "0.0.8641322",
+      "tokenAddr": "0x000000000000000000000000000000000083db2a",
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 0, "rgb_b": 255 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "MAGENTA",
+    "tokenId": "0.0.8641322",
+    "tokenAddr": "0x000000000000000000000000000000000083db2a",
+    "amount": 1,
+    "properties": { "cmyk_c": 0, "cmyk_m": 100, "cmyk_y": 0, "cmyk_k": 0 }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
-  "ruleId": "sphere://demo/light/red-green-yellow",
-  "version": "2.0.0",
-  "versionNumber": 2,
+  "ruleId": "sphere://demo/light/yellow-green-chartreuse",
+  "version": "1.0.0",
+  "versionNumber": 1,
   "domain": "color.light",
   "semantics": {
     "ontology": "doi:10.1016/j.procs.2015.08.062",
@@ -17,9 +17,9 @@
   "inputs": [
     {
       "label": "A",
-      "tokenSymbol": "RED",
-      "tokenId": "0.0.8641312",
-      "tokenAddr": "0x000000000000000000000000000000000083db20"
+      "tokenSymbol": "YELLOW",
+      "tokenId": "0.0.8641318",
+      "tokenAddr": "0x000000000000000000000000000000000083db26"
     },
     {
       "label": "B",
@@ -29,13 +29,13 @@
     }
   ],
   "output": {
-    "tokenSymbol": "YELLOW",
-    "tokenId": "0.0.8641318",
-    "tokenAddr": "0x000000000000000000000000000000000083db26",
+    "tokenSymbol": "CHARTREUSE",
+    "tokenId": "0.0.8644147",
+    "tokenAddr": "0x000000000000000000000000000000000083e633",
     "amount": "1"
   },
   "relation": "A+B->C",
-  "description": "Additive color mixing: RED + GREEN = YELLOW (light domain)",
+  "description": "Additive color mixing: YELLOW + GREEN = CHARTREUSE (light domain, tertiary)",
   "engineType": "evm",
   "functionSelector": "0xc687cfeb",
   "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"

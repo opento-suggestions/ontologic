@@ -1,5 +1,5 @@
 {
-  "ruleRef": "sphere://demo/entity/white-from-cmy",
+  "ruleRef": "sphere://demo/ontology/colourmodes-isdividedinto-rgb",
   "inputs": [
     {
       "label": "evidence",
@@ -26,10 +26,8 @@
     }
   ],
   "output": {
-    "tokenSymbol": "WHITE",
-    "tokenId": "0.0.8641323",
-    "tokenAddr": "0x000000000000000000000000000000000083db2b",
-    "amount": 1,
-    "properties": { "rgb_r": 255, "rgb_g": 255, "rgb_b": 255 }
+    "classification": "ColourModes IsDividedInto RGB",
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "section": "§5, Fig. 3 & 5"
   }
 }

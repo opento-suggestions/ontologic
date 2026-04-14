@@ -6,20 +6,23 @@
       "tokenSymbol": "CYAN",
       "tokenId": "0.0.8641320",
       "tokenAddr": "0x000000000000000000000000000000000083db28",
-      "amount": "1"
+      "amount": "1",
+      "properties": { "cmyk_c": 100, "cmyk_m": 0, "cmyk_y": 0, "cmyk_k": 0 }
     },
     {
       "label": "B",
       "tokenSymbol": "YELLOW",
       "tokenId": "0.0.8641318",
       "tokenAddr": "0x000000000000000000000000000000000083db26",
-      "amount": "1"
+      "amount": "1",
+      "properties": { "cmyk_c": 0, "cmyk_m": 0, "cmyk_y": 100, "cmyk_k": 0 }
     }
   ],
   "output": {
     "tokenSymbol": "GREEN",
     "tokenId": "0.0.8641314",
     "tokenAddr": "0x000000000000000000000000000000000083db22",
-    "amount": 1
+    "amount": 1,
+    "properties": { "cmyk_c": 100, "cmyk_m": 0, "cmyk_y": 100, "cmyk_k": 0 }
   }
 }

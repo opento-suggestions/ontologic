@@ -29,6 +29,7 @@
     "tokenSymbol": "BLACK",
     "tokenId": "0.0.8641324",
     "tokenAddr": "0x000000000000000000000000000000000083db2c",
-    "amount": 1
+    "amount": 1,
+    "properties": { "rgb_r": 0, "rgb_g": 0, "rgb_b": 0 }
   }
 }

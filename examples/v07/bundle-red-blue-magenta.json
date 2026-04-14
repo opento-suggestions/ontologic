@@ -6,20 +6,23 @@
       "tokenSymbol": "RED",
       "tokenId": "0.0.8641312",
       "tokenAddr": "0x000000000000000000000000000000000083db20",
-      "amount": "1"
+      "amount": "1",
+      "properties": { "rgb_r": 255, "rgb_g": 0, "rgb_b": 0 }
     },
     {
       "label": "B",
       "tokenSymbol": "BLUE",
       "tokenId": "0.0.8641316",
       "tokenAddr": "0x000000000000000000000000000000000083db24",
-      "amount": "1"
+      "amount": "1",
+      "properties": { "rgb_r": 0, "rgb_g": 0, "rgb_b": 255 }
     }
   ],
   "output": {
     "tokenSymbol": "MAGENTA",
     "tokenId": "0.0.8641322",
     "tokenAddr": "0x000000000000000000000000000000000083db2a",
-    "amount": 1
+    "amount": 1,
+    "properties": { "rgb_r": 255, "rgb_g": 0, "rgb_b": 255 }
   }
 }

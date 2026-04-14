@@ -1,0 +1,20 @@
+{
+  "ruleRef": "sphere://demo/cmyk/black-to-key",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "BLACK",
+      "tokenId": "0.0.8641324",
+      "tokenAddr": "0x000000000000000000000000000000000083db2c",
+      "amount": "1",
+      "properties": { "rgb_r": 0, "rgb_g": 0, "rgb_b": 0 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "KEY",
+    "tokenId": "0.0.8644153",
+    "tokenAddr": "0x000000000000000000000000000000000083e639",
+    "amount": 1,
+    "properties": { "cmyk_c": 0, "cmyk_m": 0, "cmyk_y": 0, "cmyk_k": 100 }
+  }
+}

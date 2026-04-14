@@ -77,17 +77,24 @@ Ontologic uses color theory as its reference domain because color has two contra
 |-------|------|------|
 | RED, GREEN, BLUE | Axiom | Primary inputs — operator-controlled, 1M supply |
 | YELLOW, CYAN, MAGENTA | Reasoned | Secondary outputs — contract-minted via proof |
+| ORANGE, CHARTREUSE, SPRING_GRN, AZURE, VIOLET, ROSE | Reasoned | Tertiary outputs — contract-minted via proof |
 | WHITE | Entity verdict | Light convergence + paint absence (dual-domain) |
 | BLACK | Entity verdict | Paint convergence + light absence (dual-domain) |
+| KEY | CMYK K-channel | Ink density — distinct from entity BLACK (void/absence) |
 
-### Two Domains, One Token Set
+### Three Domains, One Token Set
 
-| Domain | Physics | Rule Family | Primaries → Secondaries | Convergence | Void |
-|--------|---------|-------------|------------------------|-------------|------|
-| `color.light` | Additive light mixing | `mix_add@v1` | RGB → CMY | WHITE | BLACK |
-| `color.paint` | Subtractive pigment mixing | `mix_add@v1` | CMY → RGB | BLACK | WHITE |
+| Domain | Physics | Rule Family | Primaries → Secondaries | Operator |
+|--------|---------|-------------|------------------------|----------|
+| `color.light` | Additive light mixing | `mix_add@v1` | RGB → CMY → tertiaries | ContractProof |
+| `color.paint` | Subtractive pigment mixing | `mix_add@v1` | CMY → RGB | RegistryProof |
+| `color.cmyk` | Color space transform | `transform@v1` | RGB coords → CMYK coords | RegistryProof |
 
-The operator name `mix_add@v1` is used in both domains — it describes the *operation* (combining inputs), not the color model. The `domain` field in the RuleDef distinguishes the physics.
+### Semantic Grounding (Suresh & Jain, 2015)
+
+All rules carry a `semantics` object anchoring them to the Suresh-Jain color ontology (doi:10.1016/j.procs.2015.08.062). The OWL class hierarchy `Thing.Quality.Colour.ColourModes.{RGB, CMYK}` is encoded in `classPath`. Integer coordinates (`rgb_r/g/b` 0-255, `cmyk_c/m/y/k` 0-100%) are sealed into `inputsHash`/`outputsHash` via the `properties` field on bundles. Two capstone `classify@v1` proofs attest `ColourModes IsDividedInto {RGB, CMYK}`. See `docs/v0.8.3-SureshJain-colorimetry-explained.md`.
+
+The operator name `mix_add@v1` is used in both light and paint domains — it describes the *operation* (combining inputs), not the color model. The `domain` field in the RuleDef distinguishes the physics.
 
 Each entity token carries provenance from both domains. WHITE is proven as convergence (all light) in the light domain and as void (all pigment accounted for, blank canvas remains) in the paint domain. BLACK is proven as convergence (all pigment) in the paint domain and as void (all light accounted for, shadow remains) in the light domain. Same evidence, different rules, inverted outputs — the RIOM binding captures the distinction.
 
@@ -143,9 +150,9 @@ The object moves through the act of reasoning. Each proof is a passage through a
 **HCS Topics:**
 | Topic | ID | Content |
 |-------|-----|---------|
-| RULE_DEFS | `0.0.8641938` | 10 RuleDef JSONs |
-| RULE_REGISTRY | `0.0.8641941` | 10 ruleId → ruleUri mappings |
-| PROOF | `0.0.8641943` | MorphemeProof v0.8 anchors (29 messages) |
+| RULE_DEFS | `0.0.8641938` | 27 RuleDef JSONs (HCS Seq 1-61) |
+| RULE_REGISTRY | `0.0.8641941` | 27 ruleId → ruleUri mappings (Seq 1-38) |
+| PROOF | `0.0.8641943` | MorphemeProof v0.8 anchors (46+ messages, Seq 1-52) |
 
 **Executed Proofs:**
 
@@ -163,6 +170,23 @@ The object moves through the act of reasoning. Each proof is a passage through a
 | 10 | RegistryProof | RGB→BLACK (fresh) | Stamped | 27 |
 | 11 | RegistryProof | CMY→BLACK (shadow) | Stamped | 28 |
 | 12 | RegistryProof | RGB→WHITE (canvas) | Stamped | 29 |
+| 13 | ContractProof | R+Y→ORANGE | Minted | 36 |
+| 14 | ContractProof | Y+G→CHARTREUSE | Minted | 37 |
+| 15 | ContractProof | G+C→SPRING_GRN | Minted | 38 |
+| 16 | ContractProof | C+B→AZURE | Minted | 39 |
+| 17 | ContractProof | B+M→VIOLET | Minted | 40 |
+| 18 | ContractProof | M+R→ROSE | Minted | 41 |
+| 19 | RegistryProof | RED RGB→CMYK | Transform | 42 |
+| 20 | RegistryProof | GREEN RGB→CMYK | Transform | 43 |
+| 21 | RegistryProof | BLUE RGB→CMYK | Transform | 44 |
+| 22 | RegistryProof | YELLOW RGB→CMYK | Transform | 45 |
+| 23 | RegistryProof | CYAN RGB→CMYK | Transform | 46 |
+| 24 | RegistryProof | MAGENTA RGB→CMYK | Transform | 47 |
+| 25 | RegistryProof | WHITE RGB→CMYK | Transform | 48 |
+| 26 | RegistryProof | BLACK→KEY CMYK | Transform | 49 |
+| 27 | RegistryProof | CMY→KEY (entity) | Attested | 50 |
+| 28 | RegistryProof | ColourModes→RGB | Classified | 51 |
+| 29 | RegistryProof | ColourModes→CMYK | Classified | 52 |
 
 ### 舊 Legacy (Frozen)
 
@@ -353,7 +377,7 @@ scripts/
 │       └── metadata.js            # Provenance stamp utilities
 └── v0.6.3/                        # Legacy scripts (frozen)
 
-examples/v07/                      # 10 RuleDefs + 10 bundles
+examples/v07/                      # 27 RuleDefs + 27 bundles
 docs/                              # Architecture specs
 ```
 
@@ -378,6 +402,16 @@ Grateful to all of the assistance I received throughout this process, my wife Me
 ---
 
 ## 變化 Changelog
+
+### v0.8.3 (2026-04-14) — Colorimetry Ontology
+
+* **Semantic Grounding**: Suresh & Jain (2015) color ontology woven into RIOM. Every RuleDef carries `semantics.classPath` (`Thing.Quality.Colour.ColourModes.{RGB,CMYK}`). Every bundle carries `properties` with integer coordinates (RGB 0-255, CMYK 0-100%). Ontological reference sealed into `contentHash`, coordinates sealed into `inputsHash`/`outputsHash`.
+* **RGB Tertiaries**: 6 new tokens (ORANGE, CHARTREUSE, SPRING_GRN, AZURE, VIOLET, ROSE) — complete 12-color RGB wheel via `mix_add@v1` ContractProof
+* **CMYK Transforms**: 8 `transform@v1` RegistryProofs bridge RGB coordinates to CMYK coordinates for all base colors. `bindingHash` proves the mathematical transform.
+* **KEY Token**: CMYK K-channel (ink density) — distinct from entity BLACK (void/absence). Attested from CMY transform evidence.
+* **IsDividedInto**: 2 capstone `classify@v1` proofs seal `ColourModes IsDividedInto {RGB, CMYK}` per Figures 3 & 5
+* **Chunked Message Fix**: Bounded bidirectional search in resolve.js for interleaved HCS chunks (<10 queries per resolve)
+* **PURPLE dormant**: Removed from active scope — not part of RGB+CMYK colorimetry
 
 ### v0.8.1 (2026-04-14)
 

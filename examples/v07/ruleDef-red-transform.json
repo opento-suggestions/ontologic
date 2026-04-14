@@ -1,31 +1,25 @@
 {
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
-  "ruleId": "sphere://demo/paint/magenta-yellow-red",
-  "version": "2.0.0",
-  "versionNumber": 2,
-  "domain": "color.paint",
+  "ruleId": "sphere://demo/cmyk/red-transform",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.cmyk",
   "semantics": {
     "ontology": "doi:10.1016/j.procs.2015.08.062",
     "classPath": "Thing.Quality.Colour.ColourModes.CMYK",
     "class": "CMYK",
-    "inputsRef": ["CMYK", "CMYK"],
+    "inputsRef": ["RGB"],
     "outputRef": "CMYK",
     "relation": "HasCoordinate"
   },
-  "operator": "mix_add@v1",
+  "operator": "transform@v1",
   "inputs": [
     {
-      "label": "A",
-      "tokenSymbol": "MAGENTA",
-      "tokenId": "0.0.8641322",
-      "tokenAddr": "0x000000000000000000000000000000000083db2a"
-    },
-    {
-      "label": "B",
-      "tokenSymbol": "YELLOW",
-      "tokenId": "0.0.8641318",
-      "tokenAddr": "0x000000000000000000000000000000000083db26"
+      "label": "source",
+      "tokenSymbol": "RED",
+      "tokenId": "0.0.8641312",
+      "tokenAddr": "0x000000000000000000000000000000000083db20"
     }
   ],
   "output": {
@@ -34,8 +28,8 @@
     "tokenAddr": "0x000000000000000000000000000000000083db20",
     "amount": "1"
   },
-  "relation": "A+B->C",
-  "description": "Subtractive color mixing: MAGENTA + YELLOW = RED (paint domain)",
+  "relation": "A->A'",
+  "description": "Color space transform: RED RGB → CMYK coordinates",
   "engineType": "evm",
   "functionSelector": "0xc687cfeb",
   "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"

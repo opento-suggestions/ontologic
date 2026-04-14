@@ -89,19 +89,49 @@ export async function resolveRuleDef(ruleUri, options = {}) {
     const totalChunks = firstMsg.chunk_info.total;
     const initialTxId = firstMsg.chunk_info.initial_transaction_id;
 
-    // Query for all messages with same initial_transaction_id
-    const seqNum = firstMsg.sequence_number;
-    const chunksUrl = `${mirrorNodeUrl}/topics/${topicId}/messages?sequencenumber=gte:${seqNum}&limit=${totalChunks + 1}`;
+    // Collect all chunks with the same initial_transaction_id.
+    // The timestamp query may land on any chunk (not necessarily #1),
+    // and batch publishing can interleave chunks with other messages.
+    // Strategy: search a bounded window around the hit (back + forward).
+    // Cap at 8 mirror node queries total to stay under 10 per resolve.
+    const txStart = initialTxId.transaction_valid_start;
+    const seqNum = parseInt(firstMsg.sequence_number, 10);
+    const chunks = [firstMsg];
+    const maxQueries = 8;
+    let queries = 0;
 
-    const chunksResponse = await fetch(chunksUrl);
-    const chunksData = await chunksResponse.json();
+    // Search backward from hit (chunks may precede our entry point)
+    const backStart = Math.max(1, seqNum - totalChunks * 3);
+    let backLink = `${mirrorNodeUrl}/topics/${topicId}/messages?sequencenumber=gte:${backStart}&sequencenumber=lt:${seqNum}&limit=100`;
+    while (chunks.length < totalChunks && backLink && queries < maxQueries) {
+      queries++;
+      const resp = await fetch(backLink);
+      const data = await resp.json();
+      for (const m of data.messages || []) {
+        if (m.chunk_info &&
+            m.chunk_info.initial_transaction_id.transaction_valid_start === txStart) {
+          chunks.push(m);
+        }
+      }
+      backLink = data.links?.next ? `${mirrorNodeUrl}${data.links.next}` : null;
+    }
 
-    // Filter and sort chunks by chunk number
-    const chunks = chunksData.messages
-      .filter(m => m.chunk_info &&
-        m.chunk_info.initial_transaction_id.transaction_valid_start ===
-        initialTxId.transaction_valid_start)
-      .sort((a, b) => a.chunk_info.number - b.chunk_info.number);
+    // Search forward from hit (sibling chunks may follow)
+    let fwdLink = `${mirrorNodeUrl}/topics/${topicId}/messages?sequencenumber=gt:${seqNum}&limit=100`;
+    while (chunks.length < totalChunks && fwdLink && queries < maxQueries) {
+      queries++;
+      const resp = await fetch(fwdLink);
+      const data = await resp.json();
+      for (const m of data.messages || []) {
+        if (m.chunk_info &&
+            m.chunk_info.initial_transaction_id.transaction_valid_start === txStart) {
+          chunks.push(m);
+        }
+      }
+      fwdLink = data.links?.next ? `${mirrorNodeUrl}${data.links.next}` : null;
+    }
+
+    chunks.sort((a, b) => a.chunk_info.number - b.chunk_info.number);
 
     if (chunks.length !== totalChunks) {
       throw new Error(`Expected ${totalChunks} chunks, found ${chunks.length}`);

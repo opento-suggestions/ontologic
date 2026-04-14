@@ -2,9 +2,17 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/light/red-blue-magenta",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "mix_add@v1",
   "inputs": [
     {

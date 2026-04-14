@@ -1,9 +1,9 @@
 {
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
-  "ruleId": "sphere://demo/light/red-green-yellow",
-  "version": "2.0.0",
-  "versionNumber": 2,
+  "ruleId": "sphere://demo/light/green-cyan-spring-green",
+  "version": "1.0.0",
+  "versionNumber": 1,
   "domain": "color.light",
   "semantics": {
     "ontology": "doi:10.1016/j.procs.2015.08.062",
@@ -17,25 +17,25 @@
   "inputs": [
     {
       "label": "A",
-      "tokenSymbol": "RED",
-      "tokenId": "0.0.8641312",
-      "tokenAddr": "0x000000000000000000000000000000000083db20"
-    },
-    {
-      "label": "B",
       "tokenSymbol": "GREEN",
       "tokenId": "0.0.8641314",
       "tokenAddr": "0x000000000000000000000000000000000083db22"
+    },
+    {
+      "label": "B",
+      "tokenSymbol": "CYAN",
+      "tokenId": "0.0.8641320",
+      "tokenAddr": "0x000000000000000000000000000000000083db28"
     }
   ],
   "output": {
-    "tokenSymbol": "YELLOW",
-    "tokenId": "0.0.8641318",
-    "tokenAddr": "0x000000000000000000000000000000000083db26",
+    "tokenSymbol": "SPRING_GRN",
+    "tokenId": "0.0.8644149",
+    "tokenAddr": "0x000000000000000000000000000000000083e635",
     "amount": "1"
   },
   "relation": "A+B->C",
-  "description": "Additive color mixing: RED + GREEN = YELLOW (light domain)",
+  "description": "Additive color mixing: GREEN + CYAN = SPRING GREEN (light domain, tertiary)",
   "engineType": "evm",
   "functionSelector": "0xc687cfeb",
   "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"

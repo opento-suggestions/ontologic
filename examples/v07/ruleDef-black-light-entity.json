@@ -2,9 +2,17 @@
   "schema": "hcs.ontologic.ruleDef",
   "schemaVersion": "1",
   "ruleId": "sphere://demo/entity/black-from-light",
-  "version": "1.0.0",
-  "versionNumber": 1,
+  "version": "2.0.0",
+  "versionNumber": 2,
   "domain": "color.entity.light",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.RGB",
+    "class": "RGB",
+    "inputsRef": ["RGB", "RGB", "RGB"],
+    "outputRef": "RGB",
+    "relation": "HasCoordinate"
+  },
   "operator": "attest_palette@v1",
   "inputs": [
     {

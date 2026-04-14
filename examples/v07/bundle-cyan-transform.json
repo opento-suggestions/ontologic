@@ -1,0 +1,20 @@
+{
+  "ruleRef": "sphere://demo/cmyk/cyan-transform",
+  "inputs": [
+    {
+      "label": "source",
+      "tokenSymbol": "CYAN",
+      "tokenId": "0.0.8641320",
+      "tokenAddr": "0x000000000000000000000000000000000083db28",
+      "amount": "1",
+      "properties": { "rgb_r": 0, "rgb_g": 255, "rgb_b": 255 }
+    }
+  ],
+  "output": {
+    "tokenSymbol": "CYAN",
+    "tokenId": "0.0.8641320",
+    "tokenAddr": "0x000000000000000000000000000000000083db28",
+    "amount": 1,
+    "properties": { "cmyk_c": 100, "cmyk_m": 0, "cmyk_y": 0, "cmyk_k": 0 }
+  }
+}

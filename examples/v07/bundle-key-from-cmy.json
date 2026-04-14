@@ -1,0 +1,35 @@
+{
+  "ruleRef": "sphere://demo/cmyk/key-from-cmy",
+  "inputs": [
+    {
+      "label": "evidence",
+      "proofs": [
+        {
+          "ruleId": "sphere://demo/cmyk/cyan-transform",
+          "bindingHash": null,
+          "outputToken": "CYAN",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/cmyk/magenta-transform",
+          "bindingHash": null,
+          "outputToken": "MAGENTA",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/cmyk/yellow-transform",
+          "bindingHash": null,
+          "outputToken": "YELLOW",
+          "hcsSeq": null
+        }
+      ]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "KEY",
+    "tokenId": "0.0.8644153",
+    "tokenAddr": "0x000000000000000000000000000000000083e639",
+    "amount": 1,
+    "properties": { "cmyk_c": 0, "cmyk_m": 0, "cmyk_y": 0, "cmyk_k": 100 }
+  }
+}

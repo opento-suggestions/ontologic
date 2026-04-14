@@ -1,0 +1,45 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/cmyk/key-from-cmy",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.cmyk",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes.CMYK",
+    "class": "CMYK",
+    "inputsRef": ["CMYK", "CMYK", "CMYK"],
+    "outputRef": "CMYK",
+    "relation": "HasCoordinate"
+  },
+  "operator": "attest_palette@v1",
+  "inputs": [
+    {
+      "label": "evidence",
+      "description": "References to C, M, Y transform proof hashes — all CMY channels attested proves K channel",
+      "schema": "array<proofHash>",
+      "required": ["CYAN_transform", "MAGENTA_transform", "YELLOW_transform"]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "KEY",
+    "tokenId": "0.0.8644153",
+    "tokenAddr": "0x000000000000000000000000000000000083e639",
+    "amount": "1",
+    "verdict": "APPROVED"
+  },
+  "relation": "CYAN_t+MAGENTA_t+YELLOW_t->KEY",
+  "description": "CMYK entity attestation: KEY (K-channel) when all CMY transform proofs present — ink density convergence",
+  "evidenceRequirements": {
+    "minProofs": 3,
+    "requiredOutputs": [
+      { "tokenSymbol": "CYAN", "ruleId": "sphere://demo/cmyk/cyan-transform" },
+      { "tokenSymbol": "MAGENTA", "ruleId": "sphere://demo/cmyk/magenta-transform" },
+      { "tokenSymbol": "YELLOW", "ruleId": "sphere://demo/cmyk/yellow-transform" }
+    ]
+  },
+  "engineType": "evm",
+  "functionSelector": "0x...",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/ontology/colourmodes-isdividedinto-rgb",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.ontology",
+  "semantics": {
+    "ontology": "doi:10.1016/j.procs.2015.08.062",
+    "classPath": "Thing.Quality.Colour.ColourModes",
+    "class": "ColourModes",
+    "inputsRef": ["RGB"],
+    "outputRef": "ColourModes",
+    "relation": "IsDividedInto"
+  },
+  "operator": "classify@v1",
+  "inputs": [
+    {
+      "label": "evidence",
+      "description": "References to RGB-domain proof hashes — complete RGB color model attestation under ColourModes",
+      "schema": "array<proofHash>",
+      "required": ["RED_GREEN_YELLOW_proof", "GREEN_BLUE_CYAN_proof", "RED_BLUE_MAGENTA_proof"]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "RGB_CLASS",
+    "verdict": "CLASSIFIED"
+  },
+  "relation": "RGB_proofs->ColourModes.IsDividedInto.RGB",
+  "description": "Ontological classification: ColourModes IsDividedInto RGB — Suresh & Jain §5, Figures 3 & 5",
+  "evidenceRequirements": {
+    "minProofs": 3,
+    "requiredOutputs": [
+      { "tokenSymbol": "YELLOW", "ruleId": "sphere://demo/light/red-green-yellow" },
+      { "tokenSymbol": "CYAN", "ruleId": "sphere://demo/light/green-blue-cyan" },
+      { "tokenSymbol": "MAGENTA", "ruleId": "sphere://demo/light/red-blue-magenta" }
+    ]
+  },
+  "engineType": "evm",
+  "functionSelector": "0x...",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}
