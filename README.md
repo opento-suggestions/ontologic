@@ -1,6 +1,10 @@
 # Ontologic 本體 :: The Glass Box Protocol
 
-**Proof-of-Reasoning on Hedera**
+**Triune Proof-of-Reasoning on Hedera (HTS + HCS + Smart Contracts)**
+
+<案 **Demo Website**: [https://ontologic-uv6.caffeine.xyz/](https://ontologic-uv6.caffeine.xyz/)>
+
+<案 **Primary Webpage**: [https://ontologic.dev/](https://ontologic.dev/)>
 
 ---
 
@@ -391,7 +395,7 @@ Apache 2.0
 
 ## 恩 Acknowledgments
 
-Copyright Ontologic, Open To Suggestions Media.
+Built for the Hedera Apex Hackathon 2025. Copyright Ontologic Reclamation Group, on behalf of Open To Suggestions Media.
 Open-sourced. Apache 2.0 license. Because it is better to give than to receive.
 
 Uses HTS, HCS, Smart Contracts 2.0, and Hedera's low-latency consensus.
