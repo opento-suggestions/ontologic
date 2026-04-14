@@ -26,7 +26,7 @@ import { ethers } from "ethers";
 import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { canonicalizeJSON, hashCanonicalJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig } from "../v0.7/lib/sphere-config.js";
-import { resolveRule, computeRuleUriHash, buildHcsUri } from "../v0.7/lib/resolve.js";
+import { resolveRule, computeRuleUriHash, buildHcsUri, resolveEvidence } from "../v0.7/lib/resolve.js";
 import {
   buildMorphemeProof,
   callPrepareReasoning,
@@ -46,9 +46,14 @@ const EXAMPLES = path.join(__dirname, "..", "..", "examples", "v07");
  * Execute a ContractProof (light domain): contract call + mint + HCS + metadata stamp
  * @returns {Object} { bindingHash, hcsSeq, proofUri, consensusTimestamp }
  */
-async function runContractProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig) {
+async function runContractProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache) {
+  // Auto-resolve evidence if needed (entity bundles loaded from disk)
+  if (bundle.inputs?.[0]?.proofs?.some(p => p.bindingHash === null)) {
+    await resolveEvidence(bundle, sphereConfig.proofTopicId, { mirrorNodeUrl: networkConfig.mirrorNodeUrl });
+  }
+
   const { ruleDef, ruleUri, ruleUriHash } = await resolveRule(
-    bundle.ruleRef, sphereConfig, networkConfig.mirrorNodeUrl
+    bundle.ruleRef, sphereConfig, { mirrorNodeUrl: networkConfig.mirrorNodeUrl }
   );
 
   const inputsHash = ethers.keccak256(ethers.toUtf8Bytes(canonicalizeJSON(bundle.inputs)));
@@ -61,7 +66,7 @@ async function runContractProof(client, bundle, sphereConfig, operatorConfig, pr
   await callPrepareReasoning(client, sphereConfig.contractId, ruleUri, ruleUriHash, inputsHash);
 
   // 2. Tarski (creation): reasonWithMint
-  await callReasonWithMint(client, sphereConfig.contractId, {
+  const mintResult = await callReasonWithMint(client, sphereConfig.contractId, {
     ruleUri, ruleUriHash, inputsHash, outputsHash, bindingHash,
     outputToken: bundle.output.tokenAddr,
     amount: bundle.output.amount || 1,
@@ -73,17 +78,20 @@ async function runContractProof(client, bundle, sphereConfig, operatorConfig, pr
     inputsHash, outputsHash, bindingHash,
     contractId: sphereConfig.contractId,
     callerAccountId: operatorConfig.id,
+    transactionId: mintResult.transactionId,
   });
   const proofResult = await submitProof(client, sphereConfig.proofTopicId, proof, privateKey);
   const proofUri = buildHcsUri(sphereConfig.proofTopicId, proofResult.consensusTimestamp);
 
   // 4. Tarski (alteration): metadata stamp
   try {
-    const state = await fetchProvenanceState(networkConfig.mirrorNodeUrl, bundle.output.tokenId);
+    const state = provenanceCache?.get(bundle.output.tokenId)
+      || await fetchProvenanceState(networkConfig.mirrorNodeUrl, bundle.output.tokenId);
     const entry = buildProvenanceEntry({
       bindingHash, domain: ruleDef.domain, ruleId: ruleDef.ruleId, proofUri, proofMode: "contract",
     });
-    await stampProvenance(client, bundle.output.tokenId, state, entry, privateKey);
+    const stampResult = await stampProvenance(client, bundle.output.tokenId, state, entry, privateKey);
+    provenanceCache?.set(bundle.output.tokenId, { n: stampResult.n, root: stampResult.root });
   } catch (err) {
     console.warn(`      ⚠️  Metadata stamp failed (proof safe on HCS): ${err.message}`);
   }
@@ -102,9 +110,14 @@ async function runContractProof(client, bundle, sphereConfig, operatorConfig, pr
  * Execute a RegistryProof (paint domain): HCS anchor + metadata stamp (no contract)
  * @returns {Object} { bindingHash, hcsSeq, proofUri, consensusTimestamp }
  */
-async function runRegistryProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig) {
+async function runRegistryProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache) {
+  // Auto-resolve evidence if needed (entity bundles loaded from disk)
+  if (bundle.inputs?.[0]?.proofs?.some(p => p.bindingHash === null)) {
+    await resolveEvidence(bundle, sphereConfig.proofTopicId, { mirrorNodeUrl: networkConfig.mirrorNodeUrl });
+  }
+
   const { ruleDef, ruleUri, ruleUriHash } = await resolveRule(
-    bundle.ruleRef, sphereConfig, networkConfig.mirrorNodeUrl
+    bundle.ruleRef, sphereConfig, { mirrorNodeUrl: networkConfig.mirrorNodeUrl }
   );
 
   const inputsHash = ethers.keccak256(ethers.toUtf8Bytes(canonicalizeJSON(bundle.inputs)));
@@ -131,11 +144,13 @@ async function runRegistryProof(client, bundle, sphereConfig, operatorConfig, pr
 
   // 2. Tarski (alteration): metadata stamp
   try {
-    const state = await fetchProvenanceState(networkConfig.mirrorNodeUrl, bundle.output.tokenId);
+    const state = provenanceCache?.get(bundle.output.tokenId)
+      || await fetchProvenanceState(networkConfig.mirrorNodeUrl, bundle.output.tokenId);
     const entry = buildProvenanceEntry({
       bindingHash, domain: ruleDef.domain, ruleId: ruleDef.ruleId, proofUri, proofMode: "registry",
     });
-    await stampProvenance(client, bundle.output.tokenId, state, entry, privateKey);
+    const stampResult = await stampProvenance(client, bundle.output.tokenId, state, entry, privateKey);
+    provenanceCache?.set(bundle.output.tokenId, { n: stampResult.n, root: stampResult.root });
   } catch (err) {
     console.warn(`      ⚠️  Metadata stamp failed (proof safe on HCS): ${err.message}`);
   }
@@ -183,6 +198,7 @@ async function main() {
   const client = Client.forTestnet().setOperator(operatorConfig.id, privateKey);
 
   const allResults = [];
+  const provenanceCache = new Map(); // tokenId -> {n, root} — avoids mirror node sync lag
 
   try {
     // ═══════════════════════════════════════════════════
@@ -204,7 +220,7 @@ async function main() {
       console.log(`    inputs: ${bundle.inputs.map(i => i.tokenSymbol).join(" + ")}`);
       console.log(`    output: ${bundle.output.tokenSymbol}`);
 
-      const result = await runContractProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig);
+      const result = await runContractProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache);
 
       console.log(`    ✓ Minted ${result.outputToken}, HCS Seq: ${result.hcsSeq}`);
       console.log(`    ✓ bindingHash: ${result.bindingHash.slice(0, 18)}...`);
@@ -231,7 +247,7 @@ async function main() {
       console.log(`    inputs: ${bundle.inputs.map(i => i.tokenSymbol).join(" + ")}`);
       console.log(`    output: ${bundle.output.tokenSymbol}`);
 
-      const result = await runRegistryProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig);
+      const result = await runRegistryProof(client, bundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache);
 
       console.log(`    ✓ Stamped ${result.outputToken} (no mint), HCS Seq: ${result.hcsSeq}`);
       console.log(`    ✓ bindingHash: ${result.bindingHash.slice(0, 18)}...`);
@@ -255,7 +271,7 @@ async function main() {
     }));
 
     console.log("\n  [ContractProof] WHITE entity — evidence from 3 light proofs");
-    const whiteResult = await runContractProof(client, whiteBundle, sphereConfig, operatorConfig, privateKey, networkConfig);
+    const whiteResult = await runContractProof(client, whiteBundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache);
     console.log(`    ✓ Minted WHITE, HCS Seq: ${whiteResult.hcsSeq}`);
     allResults.push(whiteResult);
 
@@ -270,7 +286,7 @@ async function main() {
     }));
 
     console.log("\n  [RegistryProof] BLACK entity — evidence from 3 paint proofs");
-    const blackResult = await runRegistryProof(client, blackBundle, sphereConfig, operatorConfig, privateKey, networkConfig);
+    const blackResult = await runRegistryProof(client, blackBundle, sphereConfig, operatorConfig, privateKey, networkConfig, provenanceCache);
     console.log(`    ✓ Stamped BLACK (no mint), HCS Seq: ${blackResult.hcsSeq}`);
     allResults.push(blackResult);
 

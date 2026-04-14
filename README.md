@@ -77,17 +77,19 @@ Ontologic uses color theory as its reference domain because color has two contra
 |-------|------|------|
 | RED, GREEN, BLUE | Axiom | Primary inputs — operator-controlled, 1M supply |
 | YELLOW, CYAN, MAGENTA | Reasoned | Secondary outputs — contract-minted via proof |
-| WHITE | Entity verdict | Additive completeness (all light combined) |
-| BLACK | Entity verdict | Subtractive completeness (pigment saturation) |
+| WHITE | Entity verdict | Light convergence + paint absence (dual-domain) |
+| BLACK | Entity verdict | Paint convergence + light absence (dual-domain) |
 
 ### Two Domains, One Token Set
 
-| Domain | Physics | Rule Family | Primaries → Secondaries | Entity |
-|--------|---------|-------------|------------------------|--------|
-| `color.light` | Additive light mixing | `mix_add@v1` | RGB → CMY | WHITE |
-| `color.paint` | Subtractive pigment mixing | `mix_add@v1` | CMY → RGB | BLACK |
+| Domain | Physics | Rule Family | Primaries → Secondaries | Convergence | Void |
+|--------|---------|-------------|------------------------|-------------|------|
+| `color.light` | Additive light mixing | `mix_add@v1` | RGB → CMY | WHITE | BLACK |
+| `color.paint` | Subtractive pigment mixing | `mix_add@v1` | CMY → RGB | BLACK | WHITE |
 
 The operator name `mix_add@v1` is used in both domains — it describes the *operation* (combining inputs), not the color model. The `domain` field in the RuleDef distinguishes the physics.
+
+Each entity token carries provenance from both domains. WHITE is proven as convergence (all light) in the light domain and as void (all pigment accounted for, blank canvas remains) in the paint domain. BLACK is proven as convergence (all pigment) in the paint domain and as void (all light accounted for, shadow remains) in the light domain. Same evidence, different rules, inverted outputs — the RIOM binding captures the distinction.
 
 ### Proof Flow
 
@@ -141,9 +143,9 @@ The object moves through the act of reasoning. Each proof is a passage through a
 **HCS Topics:**
 | Topic | ID | Content |
 |-------|-----|---------|
-| RULE_DEFS | `0.0.8641938` | 8 RuleDef JSONs |
-| RULE_REGISTRY | `0.0.8641941` | 8 ruleId → ruleUri mappings |
-| PROOF | `0.0.8641943` | 8 MorphemeProof v0.8 anchors (Seq 18-25) |
+| RULE_DEFS | `0.0.8641938` | 10 RuleDef JSONs |
+| RULE_REGISTRY | `0.0.8641941` | 10 ruleId → ruleUri mappings |
+| PROOF | `0.0.8641943` | MorphemeProof v0.8 anchors (29 messages) |
 
 **Executed Proofs:**
 
@@ -157,6 +159,10 @@ The object moves through the act of reasoning. Each proof is a passage through a
 | 6 | RegistryProof | M+Y→RED | Stamped | 23 |
 | 7 | ContractProof | CMY→WHITE | Minted | 24 |
 | 8 | RegistryProof | RGB→BLACK | Stamped | 25 |
+| 9 | ContractProof | CMY→WHITE (fresh) | Minted | 26 |
+| 10 | RegistryProof | RGB→BLACK (fresh) | Stamped | 27 |
+| 11 | RegistryProof | CMY→BLACK (shadow) | Stamped | 28 |
+| 12 | RegistryProof | RGB→WHITE (canvas) | Stamped | 29 |
 
 ### 舊 Legacy (Frozen)
 
@@ -207,7 +213,7 @@ Sphere-specific config lives in `config.sphere-<name>.json` (topic IDs, contract
 node scripts/v0.7.1/publish-all-rules.js --sphere v08
 ```
 
-Publishes and registers all 8 rules (4 light + 4 paint) in one run.
+Publishes and registers all rules in one run.
 
 ### End-to-End Smoke Test
 
@@ -229,6 +235,11 @@ node scripts/v0.7/reason.js examples/v07/bundle-red-green-yellow.json --sphere v
 
 # RegistryProof (paint domain)
 node scripts/v0.7.1/reason-registry.js examples/v07/bundle-cyan-magenta-blue.json --sphere v08
+
+# Entity proofs (evidence auto-resolves from PROOF_TOPIC)
+node scripts/v0.7/reason.js examples/v07/bundle-white-entity.json --sphere v08
+node scripts/v0.7.1/reason-registry.js examples/v07/bundle-black-light-entity.json --sphere v08
+node scripts/v0.7.1/reason-registry.js examples/v07/bundle-white-paint-entity.json --sphere v08
 
 # Dry run (no on-chain transactions)
 node scripts/v0.7/reason.js examples/v07/bundle-red-green-yellow.json --sphere v08 --dry-run
@@ -342,7 +353,7 @@ scripts/
 │       └── metadata.js            # Provenance stamp utilities
 └── v0.6.3/                        # Legacy scripts (frozen)
 
-examples/v07/                      # 8 RuleDefs + 8 bundles
+examples/v07/                      # 10 RuleDefs + 10 bundles
 docs/                              # Architecture specs
 ```
 
@@ -356,7 +367,7 @@ Apache 2.0
 
 ## 恩 Acknowledgments
 
-Built for the Hedera Ascension Hackathon 2025. Copyright Ontologic, Open To Suggestions Media.
+Copyright Ontologic, Open To Suggestions Media.
 Open-sourced. Apache 2.0 license. Because it is better to give than to receive.
 
 Uses HTS, HCS, Smart Contracts 2.0, and Hedera's low-latency consensus.
@@ -367,6 +378,12 @@ Grateful to all of the assistance I received throughout this process, my wife Me
 ---
 
 ## 變化 Changelog
+
+### v0.8.1 (2026-04-14)
+
+* **Cross-Domain Entity Proofs**: WHITE proven from both light (convergence) and paint (blank canvas). BLACK proven from both paint (convergence) and light (shadow/void). Each entity token carries provenance from both domains.
+* **Evidence Auto-Resolution**: `resolveEvidence()` queries PROOF_TOPIC to populate entity bundle evidence from HCS. Entity bundles are now self-resolving — no dynamic patching needed.
+* **Bug Fixes**: transactionId capture in ContractProof, metadata accumulation (provenance cache), undefined variable crash in reason-registry.js, resolveRule call signature
 
 ### v0.8.0 (2026-04-14)
 

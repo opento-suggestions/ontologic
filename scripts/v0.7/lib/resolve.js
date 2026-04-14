@@ -298,6 +298,81 @@ export function verifyRuleDef(ruleDef, expected = {}) {
   };
 }
 
+/**
+ * Auto-resolve entity bundle evidence from PROOF_TOPIC
+ *
+ * For each evidence entry with bindingHash === null, queries the PROOF_TOPIC
+ * to find the latest MorphemeProof matching that ruleId and populates
+ * bindingHash and hcsSeq from the on-chain record.
+ *
+ * @param {Object} bundle - Reasoning bundle with inputs[0].proofs array
+ * @param {string} proofTopicId - HCS topic ID for proof messages
+ * @param {Object} [options] - Resolution options
+ * @param {string} [options.mirrorNodeUrl] - Override mirror node URL
+ * @returns {Promise<Object>} The bundle with evidence fields populated
+ * @throws {Error} If required evidence is not found on PROOF_TOPIC
+ */
+export async function resolveEvidence(bundle, proofTopicId, options = {}) {
+  const proofs = bundle.inputs?.[0]?.proofs;
+  if (!proofs || !proofs.some(p => p.bindingHash === null)) {
+    return bundle; // nothing to resolve
+  }
+
+  const networkConfig = getNetworkConfig();
+  const mirrorNodeUrl = options.mirrorNodeUrl || networkConfig.mirrorNodeUrl;
+
+  // Collect which ruleIds we need to resolve
+  const needed = new Set(proofs.filter(p => p.bindingHash === null).map(p => p.ruleId));
+
+  // Paginated query of PROOF_TOPIC (same pattern as resolveLatestRule)
+  const proofsByRuleId = new Map();
+  let nextLink = `${mirrorNodeUrl}/topics/${proofTopicId}/messages?limit=100`;
+
+  while (nextLink) {
+    const response = await fetch(nextLink);
+    if (!response.ok) {
+      throw new Error(`Mirror node query failed: ${response.status}`);
+    }
+    const data = await response.json();
+
+    for (const msg of data.messages || []) {
+      try {
+        const payload = Buffer.from(msg.message, "base64").toString("utf8");
+        const entry = JSON.parse(payload);
+
+        if (entry.schema === "hcs.ontologic.morphemeProof" && needed.has(entry.ruleId)) {
+          const seq = parseInt(msg.sequence_number, 10);
+          const existing = proofsByRuleId.get(entry.ruleId);
+          if (!existing || seq > existing.hcsSeq) {
+            proofsByRuleId.set(entry.ruleId, {
+              bindingHash: entry.bindingHash,
+              hcsSeq: seq,
+            });
+          }
+        }
+      } catch {
+        continue; // skip malformed messages
+      }
+    }
+
+    nextLink = data.links?.next ? `${mirrorNodeUrl}${data.links.next}` : null;
+  }
+
+  // Populate null evidence fields
+  for (const proof of proofs) {
+    if (proof.bindingHash === null) {
+      const resolved = proofsByRuleId.get(proof.ruleId);
+      if (!resolved) {
+        throw new Error(`Evidence not found on PROOF_TOPIC for ruleId: ${proof.ruleId}`);
+      }
+      proof.bindingHash = resolved.bindingHash;
+      proof.hcsSeq = resolved.hcsSeq;
+    }
+  }
+
+  return bundle;
+}
+
 export default {
   parseHcsUri,
   buildHcsUri,
@@ -305,5 +380,6 @@ export default {
   resolveRuleDef,
   resolveLatestRule,
   resolveRule,
-  verifyRuleDef
+  verifyRuleDef,
+  resolveEvidence
 };

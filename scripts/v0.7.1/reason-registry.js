@@ -27,7 +27,7 @@ import { ethers } from "ethers";
 import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { canonicalizeJSON, hashCanonicalJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig } from "../v0.7/lib/sphere-config.js";
-import { resolveRule, computeRuleUriHash, buildHcsUri } from "../v0.7/lib/resolve.js";
+import { resolveRule, computeRuleUriHash, buildHcsUri, resolveEvidence } from "../v0.7/lib/resolve.js";
 import { fetchProvenanceState, buildProvenanceEntry, stampProvenance } from "./lib/metadata.js";
 import * as logger from "../v0.6.3/lib/logger.js";
 
@@ -118,6 +118,15 @@ async function main() {
 
   console.log(`\nContract: ${sphereConfig.contractId} (not called — RegistryProof mode)`);
 
+  // Auto-resolve evidence if bundle has null bindingHash fields (entity bundles)
+  if (bundle.inputs?.[0]?.proofs?.some(p => p.bindingHash === null)) {
+    console.log("\nAuto-resolving evidence from PROOF_TOPIC...");
+    await resolveEvidence(bundle, sphereConfig.proofTopicId, { mirrorNodeUrl: networkConfig.mirrorNodeUrl });
+    for (const p of bundle.inputs[0].proofs) {
+      console.log(`  ${p.ruleId} → bindingHash=${p.bindingHash.slice(0, 18)}..., hcsSeq=${p.hcsSeq}`);
+    }
+  }
+
   // ─── Layer 1: Peirce (Logic) ───
   // Resolve rule and compute hashes
 
@@ -127,7 +136,7 @@ async function main() {
   const { ruleDef, ruleUri, ruleUriHash } = await resolveRule(
     ruleRef,
     sphereConfig,
-    networkConfig.mirrorNodeUrl
+    { mirrorNodeUrl: networkConfig.mirrorNodeUrl }
   );
 
   console.log(`  Resolved to: ${ruleUri}`);
@@ -224,7 +233,7 @@ async function main() {
       "proofUri": proofUri,
       "HCS Seq": proofResult.sequenceNumber,
       "Token Stamped": `${bundle.output.tokenSymbol} (${bundle.output.tokenId})`,
-      "Provenance Count": currentMetadata.provenanceHistory.length.toString(),
+      "Provenance Count": stampResult.n.toString(),
     });
 
   } finally {

@@ -1,0 +1,34 @@
+{
+  "ruleRef": "sphere://demo/entity/black-from-light",
+  "inputs": [
+    {
+      "label": "evidence",
+      "proofs": [
+        {
+          "ruleId": "sphere://demo/light/red-green-yellow",
+          "bindingHash": null,
+          "outputToken": "YELLOW",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/light/green-blue-cyan",
+          "bindingHash": null,
+          "outputToken": "CYAN",
+          "hcsSeq": null
+        },
+        {
+          "ruleId": "sphere://demo/light/red-blue-magenta",
+          "bindingHash": null,
+          "outputToken": "MAGENTA",
+          "hcsSeq": null
+        }
+      ]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "BLACK",
+    "tokenId": "0.0.8641324",
+    "tokenAddr": "0x000000000000000000000000000000000083db2c",
+    "amount": 1
+  }
+}

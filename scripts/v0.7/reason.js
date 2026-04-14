@@ -38,7 +38,7 @@ import { ethers } from "ethers";
 import { getOperatorConfig, getNetworkConfig } from "../v0.6.3/lib/config.js";
 import { canonicalizeJSON, hashCanonicalJSON } from "../v0.6.3/lib/canonicalize.js";
 import { loadSphereConfig, requireContract } from "./lib/sphere-config.js";
-import { resolveRule, computeRuleUriHash, buildHcsUri } from "./lib/resolve.js";
+import { resolveRule, computeRuleUriHash, buildHcsUri, resolveEvidence } from "./lib/resolve.js";
 import { fetchProvenanceState, buildProvenanceEntry, stampProvenance } from "../v0.7.1/lib/metadata.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -223,6 +223,15 @@ async function main() {
   const config = loadSphereConfig(sphereName);
   requireContract(config);
   console.log(`\nContract: ${config.contractId}`);
+
+  // Auto-resolve evidence if bundle has null bindingHash fields (entity bundles)
+  if (bundle.inputs?.[0]?.proofs?.some(p => p.bindingHash === null)) {
+    console.log("\nAuto-resolving evidence from PROOF_TOPIC...");
+    await resolveEvidence(bundle, config.proofTopicId);
+    for (const p of bundle.inputs[0].proofs) {
+      console.log(`  ${p.ruleId} → bindingHash=${p.bindingHash.slice(0, 18)}..., hcsSeq=${p.hcsSeq}`);
+    }
+  }
 
   // Resolve rule
   const effectiveRuleRef = ruleRef || bundle.ruleRef || bundle.ruleId;

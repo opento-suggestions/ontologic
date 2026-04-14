@@ -1,0 +1,37 @@
+{
+  "schema": "hcs.ontologic.ruleDef",
+  "schemaVersion": "1",
+  "ruleId": "sphere://demo/entity/white-from-paint",
+  "version": "1.0.0",
+  "versionNumber": 1,
+  "domain": "color.entity.paint",
+  "operator": "attest_palette@v1",
+  "inputs": [
+    {
+      "label": "evidence",
+      "description": "References to RGB paint proof hashes — all pigment accounted for proves blank canvas",
+      "schema": "array<proofHash>",
+      "required": ["BLUE_proof", "GREEN_proof", "RED_proof"]
+    }
+  ],
+  "output": {
+    "tokenSymbol": "WHITE",
+    "tokenId": "0.0.8641323",
+    "tokenAddr": "0x000000000000000000000000000000000083db2b",
+    "amount": "1",
+    "verdict": "APPROVED"
+  },
+  "relation": "BLUE+GREEN+RED->WHITE",
+  "description": "Entity attestation: WHITE verdict (blank canvas) when all RGB paint proofs present — all pigment accounted for, what remains is purity",
+  "evidenceRequirements": {
+    "minProofs": 3,
+    "requiredOutputs": [
+      { "tokenSymbol": "BLUE", "tokenAddr": "0x000000000000000000000000000000000083db24" },
+      { "tokenSymbol": "GREEN", "tokenAddr": "0x000000000000000000000000000000000083db22" },
+      { "tokenSymbol": "RED", "tokenAddr": "0x000000000000000000000000000000000083db20" }
+    ]
+  },
+  "engineType": "evm",
+  "functionSelector": "0x...",
+  "engineCodeHash": "0xafdbddbb6ea91a3a6fa439d073d400a20fb6fd70fc0bf9b8b98c61feee560b6c"
+}
